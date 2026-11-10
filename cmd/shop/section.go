@@ -23,7 +23,7 @@ func newSectionCmd(feats *features.FeatureService) *clic.Clic {
 	create := clic.NewFromFunc(createSection(opts, feats), "create")
 	create.Flag(&opts.Name, "n|name", "Name of the section.")
 	create.Flag(&opts.useTemplates, "t|template", "Pick a prebuilt feature to add to the theme.")
-	create.Flag(&opts.Blocks, "b|blocks", "Add a block (repeatable). Ex.\nshop section create -b \"Slide,image_picker:image:Image,text:caption:Caption\"\nThe block type is derived from its name.")
+	create.Flag(&opts.Blocks, "b|blocks", "Add a block as \"Name,type:id:label,...\" (repeatable). Its type is derived from the name.")
 	create.Operand(&opts.Settings, false, "settings", "A comma separated list of settings as type:id:label. Ex.\n\"text:title:Title,image_picker:image:Background Image\"")
 
 	return clic.NewFromFunc(requireSubcommand, "section", create)

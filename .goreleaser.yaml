@@ -3,22 +3,19 @@ version: 2
 before:
   hooks:
     - go mod tidy
-    # Remove the go generate line if you don't use it
 
 builds:
-  - env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
+  - main: ./cmd/shop
     binary: shop
-    main: ./cmd
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
 
 archives:
+  # install.sh expects names like shop-cli_darwin_arm64.tar.gz
   - name_template: >-
       {{ .ProjectName }}_
       {{- .Os }}_
@@ -35,6 +32,5 @@ changelog:
 
 release:
   github:
-    owner: guitarkeegan # Replace with your GitHub org/username
-    name: shop-cli # Replace with your repo name
-  # For private repos, make sure GITHUB_TOKEN is set
+    owner: guitarkeegan
+    name: shop-cli

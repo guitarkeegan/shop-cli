@@ -1,6 +1,9 @@
-// This is a fork of filepicker by Andrey Nering https://github.com/andreynering for the purposed of adding a file contents preview
 // Package filepicker provides a file picker component for Bubble Tea
 // applications.
+//
+// It is a fork of the filepicker in github.com/charmbracelet/bubbles
+// (MIT, see LICENSE in this directory), extended to read the hovered
+// file's contents for a preview pane.
 package filepicker
 
 import (
