@@ -1,0 +1,131 @@
+{%- liquid
+  assign color_scheme = section.settings.color_scheme
+  assign padding_top = section.settings.padding_top
+  assign padding_bottom = section.settings.padding_bottom
+-%}
+<div class="color-{{ color_scheme }}">
+  <div
+    class="color-{{ color_scheme }} pt-(--default--padding--top) pb-(--default--padding--bottom) overflow-hidden"
+    style="--default--padding--top: {{ padding_top }}px; --default--padding--bottom: {{ padding_bottom }}px;"
+  ></div>
+</div>
+
+<section id="products" class="py-20">
+  <div class="container">
+    <collection-filters-handler
+      products-selector="#product-grid"
+      pagination-selector="#pagination"
+      filters-selector="#filter-options"
+      product-count-selector="#product-count"
+      form-id="collectionFiltersForm"
+      section-id="{{ section.id }}"
+      list-item-key="data-product-id"
+    >
+      <div class="grid grid-cols-1 laptop:grid-cols-12 gap-8">
+        {%- comment -%}Desktop filters - hidden on mobile{%- endcomment -%}
+        <div class="hidden laptop:block laptop:col-span-3">
+          {% render 'collection-filters', collection: collection %}
+        </div>
+
+        <div class="laptop:col-span-9">
+          {%- comment -%}Mobile filters button - visible on mobile only{%- endcomment -%}
+          {%- liquid
+            comment
+              Count active filters across all filter types
+            endcomment
+            assign active_filter_count = 0
+            for filter in collection.filters
+              if filter.type == 'price_range'
+                if filter.min_value.value or filter.max_value.value
+                  assign active_filter_count = active_filter_count | plus: 1
+                endif
+              else
+                assign active_filter_count = active_filter_count | plus: filter.active_values.size
+              endif
+            endfor
+          -%}
+          <drawer-trigger target="#collectionFiltersDrawer" on="click" action="toggle" class="laptop:hidden">
+            <button
+              type="button"
+              id="mobileFiltersButton"
+              class="w-full mb-4 px-4 py-2 border-2 rounded-md text-sm font-bold flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground"
+              aria-label="Open filters"
+            >
+              <i class="fa-sharp fa-solid fa-filter"></i>
+              Filters
+              <span
+                id="mobileFiltersCount"
+                class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-accent-2 text-background text-xs rounded-full"
+                style="display: {% if active_filter_count > 0 %}inline-flex{% else %}none{% endif %}"
+              >
+                {{ active_filter_count }}
+              </span>
+            </button>
+          </drawer-trigger>
+
+          {% render 'collection-product-grid' %}
+        </div>
+      </div>
+
+      {%- comment -%}Mobile filters drawer{%- endcomment -%}
+      {% render 'collection-filters-mobile', collection: collection %}
+    </collection-filters-handler>
+  </div>
+</section>
+
+{%- render 'asset', entry: '@sections/collection-product-grid.ts' -%}
+
+{% schema %}
+{
+  "name": "Collection Product Grid",
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:sections.general.theme.header"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:sections.all.colors.label",
+      "info": "t:sections.all.colors.has_cards_info",
+      "default": "Primary"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding.padding_top",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding.padding_bottom",
+      "default": 36
+    }
+  ],
+  "blocks": [
+    {
+      "type": "@app"
+    },
+    {
+      "type": "@theme"
+    }
+  ],
+  "enabled_on": {
+    "templates": ["collection"]
+  },
+  "presets": [
+    {
+      "name": "Collection Product Grid"
+    }
+  ]
+}
+{% endschema %}

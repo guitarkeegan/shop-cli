@@ -1,0 +1,147 @@
+{% doc %}
+  @description - Renders the product grid for 'collection product grid'.
+{% enddoc %}
+
+{%- liquid
+  assign current_sort = request.url | split: 'sort_by=' | last | split: '&' | first | url_decode
+  if current_sort == request.url
+    assign current_sort = collection.sort_by | default: collection.default_sort_by
+  endif
+-%}
+
+<div>
+  <div class="flex items-center justify-between mb-4">
+    <h2 id="product-count" class="text-sm" aria-live="polite" aria-atomic="true">{{ collection.products_count }} Products</h2>
+    <div class="flex items-center gap-2">
+      <label for="sort-by" class="text-sm sr-only">Sort products by</label>
+      <select
+        name="sort_by"
+        id="sort-by"
+        class="w-48 px-4 py-2 border-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+        aria-label="Sort products by"
+      >
+      <option
+        value="manual"
+        {% if current_sort == 'manual' %}
+          selected
+        {% endif %}
+      >
+        Featured
+      </option>
+      <option
+        value="best-selling"
+        {% if current_sort == 'best-selling' %}
+          selected
+        {% endif %}
+      >
+        Best selling
+      </option>
+      <option
+        value="title-ascending"
+        {% if current_sort == 'title-ascending' %}
+          selected
+        {% endif %}
+      >
+        Alphabetically, A-Z
+      </option>
+      <option
+        value="title-descending"
+        {% if current_sort == 'title-descending' %}
+          selected
+        {% endif %}
+      >
+        Alphabetically, Z-A
+      </option>
+      <option
+        value="price-ascending"
+        {% if current_sort == 'price-ascending' %}
+          selected
+        {% endif %}
+      >
+        Price, low to high
+      </option>
+      <option
+        value="price-descending"
+        {% if current_sort == 'price-descending' %}
+          selected
+        {% endif %}
+      >
+        Price, high to low
+      </option>
+      <option
+        value="created-ascending"
+        {% if current_sort == 'created-ascending' %}
+          selected
+        {% endif %}
+      >
+        Date, old to new
+      </option>
+      <option
+        value="created-descending"
+        {% if current_sort == 'created-descending' %}
+          selected
+        {% endif %}
+      >
+        Date, new to old
+      </option>
+    </select>
+    </div>
+  </div>
+
+  {% paginate collection.products by 9 %}
+    <div id="product-grid" class="grid grid-cols-2 laptop:grid-cols-3 gap-4 mb-8">
+      {% for product in collection.products %}
+        <div data-product-id="{{ product.id }}" class="product-card">
+          {% render 'product-card', product: product, collection: collection %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div id="pagination" class="flex justify-center gap-0 text-xs">
+      {% if paginate.pages > 1 %}
+        {%- comment -%} Previous button {%- endcomment -%}
+        {% if paginate.previous %}
+          <a
+            href="{{ paginate.previous.url }}"
+            class="flex items-center justify-center w-12 h-12 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground"
+            aria-label="Go to previous page"
+          >
+            ‹
+          </a>
+        {% endif %}
+
+        {%- comment -%} Page numbers {%- endcomment -%}
+        {% for part in paginate.parts %}
+          {% if part.is_link %}
+            <a
+              href="{{ part.url }}"
+              class="flex items-center justify-center w-12 h-12 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground"
+              aria-label="Go to page {{ part.title }}"
+            >
+              {{ part.title }}
+            </a>
+          {% elsif part.title == paginate.current_page %}
+            <span class="flex items-center justify-center w-12 h-12 bg-gray-200 rounded-full" aria-current="page" aria-label="Current page, page {{ part.title }}">
+              {{ part.title }}
+            </span>
+          {% else %}
+            <span class="flex items-center justify-center w-12 h-12 rounded-full">
+              {{ part.title }}
+            </span>
+          {% endif %}
+        {% endfor %}
+
+        {%- comment -%} Next button {%- endcomment -%}
+        {% if paginate.next %}
+          <a
+            href="{{ paginate.next.url }}"
+            class="flex items-center justify-center w-12 h-12 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground"
+            aria-label="Go to next page"
+          >
+            ›
+          </a>
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endpaginate %}
+</div>

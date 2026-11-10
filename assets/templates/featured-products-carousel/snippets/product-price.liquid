@@ -1,0 +1,98 @@
+{%- doc -%}
+  @param {number} [price] - The normal price to show
+  @param {number} [min_price] - The minimum price to show
+  @param {number} [max_price] - The max price to show
+  @param {string} [compare_price] - The discounted price to show
+  @param {string} [display] - "default" or "with-currency" or "without-currency" or "without-trailing-zeroes"
+  @param {string} [class]
+  @param {string} [tag] - Root html tag for the price
+{%- enddoc -%}
+{%- liquid
+  assign display = display | default: 'default'
+
+  assign is_range = false
+
+  if min_price != blank and max_price != blank and price == blank and compare_price == blank
+    assign is_range = true
+  endif
+
+  if price == blank and min_price == max_price
+    assign price = min_price
+  endif
+
+  if min_price > max_price
+    assign temp_price = max_price
+    assign max_price = min_price
+    assign min_price = temp_price
+  endif
+
+  assign class = class | default: ''
+  assign tag = tag | default: 'p'
+-%}
+
+{%- if price != blank or min_price != blank -%}
+  <{{ tag }} class="price {{ class }} {%- if is_range %} price--range {% endif %}">
+    {%- if price != blank and compare_price == blank -%}
+      <span class="price__current">
+        {%- if display == 'default' -%}
+          {{ price | money }}
+        {%- elsif display == 'with-currency' -%}
+          {{ price | money_with_currency }}
+        {%- elsif display == 'without-currency' -%}
+          {{ price | money_without_currency }}
+        {%- elsif display == 'without-trailing-zeroes' -%}
+          {{ price | money_without_trailing_zeros }}
+        {%- endif -%}
+      </span>
+    {%- elsif price != blank and compare_price != blank -%}
+      {%- if compare_price > price -%}
+        <s class="price__compare">
+          {%- if display == 'default' -%}
+            {{ compare_price | money }}
+          {%- elsif display == 'with-currency' -%}
+            {{ compare_price | money_with_currency }}
+          {%- elsif display == 'without-currency' -%}
+            {{ compare_price | money_without_currency }}
+          {%- elsif display == 'without-trailing-zeroes' -%}
+            {{ compare_price | money_without_trailing_zeros }}
+          {%- endif -%}
+        </s>
+      {%- endif -%}
+      <span class="price__current">
+        {%- if display == 'default' -%}
+          {{ price | money }}
+        {%- elsif display == 'with-currency' -%}
+          {{ price | money_with_currency }}
+        {%- elsif display == 'without-currency' -%}
+          {{ price | money_without_currency }}
+        {%- elsif display == 'without-trailing-zeroes' -%}
+          {{ price | money_without_trailing_zeros }}
+        {%- endif -%}
+      </span>
+    {%- elsif min_price != blank and max_price != blank -%}
+      <span class="price__min">
+        {%- if display == 'default' -%}
+          {{ min_price | money }}
+        {%- elsif display == 'with-currency' -%}
+          {{ min_price | money_with_currency }}
+        {%- elsif display == 'without-currency' -%}
+          {{ min_price | money_without_currency }}
+        {%- elsif display == 'without-trailing-zeroes' -%}
+          {{ min_price | money_without_trailing_zeros }}
+        {%- endif -%}
+      </span>
+      -
+      <span class="price__max">
+        {%- if display == 'default' -%}
+          {{ max_price | money }}
+        {%- elsif display == 'with-currency' -%}
+          {{ max_price | money_with_currency }}
+        {%- elsif display == 'without-currency' -%}
+          {{ max_price | money_without_currency }}
+        {%- elsif display == 'without-trailing-zeroes' -%}
+          {{ max_price | money_without_trailing_zeros }}
+        {%- endif -%}
+      </span>
+    {%- endif -%}
+  </{{ tag }}>
+{%- endif -%}

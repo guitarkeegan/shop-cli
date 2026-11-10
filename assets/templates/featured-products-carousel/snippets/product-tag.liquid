@@ -1,0 +1,21 @@
+{%- doc -%}
+  @param {product} product
+{%- enddoc -%}
+{%- liquid
+  assign badges = product.metafields.general.badges.value
+-%}
+{%- if badges.size > 0 -%}
+  {%- liquid
+    assign class = ''
+    assign badge = badges | first
+
+    if badge contains 'Sale'
+      assign class = 'text-background bg-error'
+    elsif badge contains 'New'
+      assign class = 'text-muted bg-info'
+    endif
+  -%}
+  <span class="px-3 py-1 rounded-full justify-self-end text-xs text-xs--spaced text-[calc(var(--spacing)*2.5)]! {{ class }}">
+    {{ badge }}
+  </span>
+{%- endif -%}

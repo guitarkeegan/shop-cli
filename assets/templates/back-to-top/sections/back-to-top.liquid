@@ -1,0 +1,61 @@
+{% liquid
+  assign color_scheme = section.settings.color_scheme
+%}
+
+<button
+  id="back-to-top"
+  type="button"
+  class="fixed right-4 bottom-4 lg:right-16 lg:bottom-16 w-12 h-12 flex items-center justify-center rounded-full bg-black text-white cursor-pointer opacity-0 hover:opacity-100 transition-opacity duration-300 z-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white color-{{ color_scheme }} shadow-lg shadow-background"
+  aria-label="Back to top"
+>
+{%- capture button_content -%}
+  <i class="fa-sharp fa-solid fa-arrow-up"></i>
+{%- endcapture -%}
+{%- capture button_attributes -%}
+  id="backToTop"
+  type="button"
+  aria-label="Back to top"
+{%- endcapture -%}
+
+{%- render 'button',
+  content: button_content,
+  attributes: button_attributes,
+  class: "opacity-0 pointer-events-none w-12 h-12 px-2 py-2 rounded-full data-[visible='true']:opacity-100 z-50 fixed right-4 bottom-4 data-[visible='true']:pointer-events-auto transition-all shadow-lg"
+-%}
+
+{%- comment -%}
+  <button
+    id="back-to-top"
+    type="button"
+    class="fixed right-4 bottom-4 w-12 h-12 flex items-center justify-center rounded-full cursor-pointer opacity-0 pointer-events-none transition-opacity duration-300 z-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-ring color-{{ color_scheme }}"
+    aria-label="Back to top"
+  >
+  </button>
+{%- endcomment -%}
+
+{%- render 'asset', entry: '@sections/back-to-top.ts' -%}
+
+{% schema %}
+{
+  "name": "Back To Top",
+  "settings": [
+    {
+      "type": "header",
+      "content": "t:sections.general.theme.header"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color Scheme"
+    }
+  ],
+  "enabled_on": {
+    "groups": ["custom.global"]
+  },
+  "presets": [
+    {
+      "name": "Back To Top"
+    }
+  ]
+}
+{% endschema %}

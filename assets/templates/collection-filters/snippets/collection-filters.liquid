@@ -1,0 +1,167 @@
+{% doc %}
+  @param {object} collection - Current Collection with filters.
+
+  @description - Renders dynamic filters from Shopify's Search & Discovery app.
+{% enddoc %}
+
+<form id="collectionFiltersForm">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-sm font-bold">Filters</h2>
+    <button type="reset" class="text-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground rounded" aria-label="Clear all filters">Clear all</button>
+  </div>
+
+  <accordion-context>
+    {%- for filter in collection.filters -%}
+      <accordion-item class="group">
+        <fieldset class="{% if forloop.first %}{% else %}mt-4{% endif %} overflow-hidden">
+          <accordion-trigger class="cursor-pointer block ">
+            <div class="flex items-center justify-between mb-2">
+              <legend class="text-sm font-bold">{{ filter.label }}</legend>
+              <i
+                class="fa-sharp fa-solid fa-chevron-down transition-transform duration-300 group-aria-expanded:rotate-180"
+              ></i>
+            </div>
+          </accordion-trigger>
+
+          <accordion-content style="display: none;">
+            {%- case filter.type -%}
+              {%- when 'boolean' -%}
+                {%- comment -%}Boolean filters (e.g., In Stock, On Sale){%- endcomment -%}
+                <ul class="pb-4 mb-4 border-b">
+                  <li class="py-1">
+                    <div class="flex items-center justify-between">
+                      <div class="flex justify-start gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          name="{{ filter.param_name }}"
+                          id="filter-{{ filter.param_name }}-true"
+                          class="text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground rounded peer"
+                          value="{{ filter.true_value.value }}"
+                          {% if filter.true_value.active %}
+                            checked
+                          {% endif %}
+                          {% if filter.true_value.count == 0 and filter.true_value.active == false %}
+                            disabled
+                          {% endif %}
+                        >
+                        <label for="filter-{{ filter.param_name }}-true" class="text-sm cursor-pointer peer-focus-visible:underline">
+                          {{ filter.true_value.label }}
+                        </label>
+                      </div>
+                      <div class="text-xs text-gray-600">{{ filter.true_value.count }}</div>
+                    </div>
+                  </li>
+                  <li class="py-1">
+                    <div class="flex items-center justify-between">
+                      <div class="flex justify-start gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          name="{{ filter.param_name }}"
+                          id="filter-{{ filter.param_name }}-false"
+                          class="text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground rounded peer"
+                          value="{{ filter.false_value.value }}"
+                          {% if filter.false_value.active %}
+                            checked
+                          {% endif %}
+                          {% if filter.false_value.count == 0 and filter.false_value.active == false %}
+                            disabled
+                          {% endif %}
+                        >
+                        <label for="filter-{{ filter.param_name }}-false" class="text-sm cursor-pointer peer-focus-visible:underline">
+                          {{ filter.false_value.label }}
+                        </label>
+                      </div>
+                      <div class="text-xs text-gray-600">{{ filter.false_value.count }}</div>
+                    </div>
+                  </li>
+                </ul>
+
+              {%- when 'list' -%}
+                {%- comment -%}List filters (e.g., Vendor, Tags, Product Type){%- endcomment -%}
+                <ul
+                  class="pb-4 mb-4 border-b"
+                  {% if forloop.first %}
+                  {% else %}
+                    id="filter-options"
+                  {% endif %}
+                >
+                  {%- for filter_value in filter.values -%}
+                    {% assign filter_value_handle = filter_value.value | handleize %}
+                    <li class="py-1">
+                      <div class="flex items-center justify-between">
+                        <div class="flex justify-start gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            name="{{ filter_value.param_name }}"
+                            id="filter-{{ filter.param_name }}-{{ forloop.index }}"
+                            class="text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground rounded peer"
+                            value="{{ filter_value.value }}"
+                            {% if filter_value.active %}
+                              checked
+                            {% endif %}
+                            {% if filter_value.count == 0 and filter_value.active == false %}
+                              disabled
+                            {% endif %}
+                          >
+                          <label
+                            for="filter-{{ filter.param_name }}-{{ forloop.index }}"
+                            class="text-sm cursor-pointer peer-focus-visible:underline"
+                          >
+                            {{ filter_value.label }}
+                          </label>
+                        </div>
+                        <div class="text-xs text-gray-600">{{ filter_value.count }}</div>
+                      </div>
+                    </li>
+                  {%- endfor -%}
+                </ul>
+
+              {%- when 'price_range' -%}
+                {%- comment -%}Price range filter{%- endcomment -%}
+                <div class="pb-4 mb-4 border-b">
+                  <div class="flex gap-2 items-center">
+                    <div class="flex-1">
+                      <label for="filter-{{ filter.min_value.param_name }}" class="text-xs text-gray-600">From</label>
+                      <div class="flex items-center">
+                        <span class="text-xs text-gray-600 mr-1">{{ cart.currency.symbol }}</span>
+                        <input
+                          type="number"
+                          name="{{ filter.min_value.param_name }}"
+                          id="filter-{{ filter.min_value.param_name }}"
+                          class="w-full text-sm border rounded px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                          {% if filter.min_value.value %}
+                            value="{{ filter.min_value.value | money_without_currency | replace: ',', '' }}"
+                          {% endif %}
+                          placeholder="0"
+                          min="0"
+                          max="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
+                        >
+                      </div>
+                    </div>
+                    <div class="flex-1">
+                      <label for="filter-{{ filter.max_value.param_name }}" class="text-xs text-gray-600">To</label>
+                      <div class="flex items-center">
+                        <span class="text-xs text-gray-600 mr-1">{{ cart.currency.symbol }}</span>
+                        <input
+                          type="number"
+                          name="{{ filter.max_value.param_name }}"
+                          id="filter-{{ filter.max_value.param_name }}"
+                          class="w-full text-sm border rounded px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                          {% if filter.max_value.value %}
+                            value="{{ filter.max_value.value | money_without_currency | replace: ',', '' }}"
+                          {% endif %}
+                          placeholder="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
+                          min="0"
+                          max="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
+                        >
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            {%- endcase -%}
+          </accordion-content>
+        </fieldset>
+      </accordion-item>
+    {%- endfor -%}
+  </accordion-context>
+</form>

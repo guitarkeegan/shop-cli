@@ -1,0 +1,206 @@
+{% doc %}
+  @param {object} collection - Current Collection with filters.
+
+  @description - Renders mobile drawer filters synced with desktop filters.
+{% enddoc %}
+
+<drawer-context
+  class="fixed bottom-0 left-0 right-0 w-full pointer-events-none z-[999999] *:pointer-events-auto bg-transparent hidden"
+  is-open="false"
+  should-trap-focus="true"
+  close-on-escape="true"
+  id="collectionFiltersDrawer"
+>
+  <drawer-backdrop
+    class="[--drawer--opacity-from:0] [--drawer--opacity-to:1] pointer-events-auto fixed inset-0 z-40 bg-black/20 opacity-(--drawer--opacity-from) backdrop-blur-lg"
+  ></drawer-backdrop>
+  <drawer-content
+    class="no-scrollbar block bottom-0 left-0 right-0 w-full z-50 bg-white max-h-[85vh] rounded-t-2xl relative overflow-hidden"
+  >
+    <form-sync name="collectionFilterForm" form-id="collectionFiltersForm">
+      <form id="collectionFiltersFormMobile">
+        <div class="p-4 border-b sticky top-0 bg-white z-10">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-bold">Filters</h2>
+            <drawer-trigger target="#collectionFiltersDrawer" on="click" action="close">
+              <button
+                type="button"
+                class="text-2xl leading-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground rounded"
+                aria-label="Close filters"
+              >
+                <i class="fa-sharp fa-solid fa-xmark hover:cursor-pointer"></i>
+              </button>
+            </drawer-trigger>
+          </div>
+          <button
+            type="reset"
+            class="text-xs text-gray-600 hover:text-gray-900 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground rounded"
+            aria-label="Clear all filters"
+          >
+            Clear all
+          </button>
+        </div>
+
+        <accordion-context class="p-4">
+          {%- for filter in collection.filters -%}
+            <accordion-item class="group">
+              <fieldset class="{% if forloop.first %}{% else %}mt-4{% endif %} px-4 overflow-hidden">
+                <accordion-trigger class="cursor-pointer block group/trigger">
+                  <div class="flex items-center justify-between mb-2">
+                    <legend class="text-sm font-bold">{{ filter.label }}</legend>
+                    <i
+                      class="fa-sharp fa-solid fa-chevron-down transition-transform duration-300 group-[[expanded=true]]/trigger:rotate-180"
+                    ></i>
+                  </div>
+                </accordion-trigger>
+
+                <accordion-content style="display: none;">
+                  {%- case filter.type -%}
+                    {%- when 'boolean' -%}
+                      <ul class="pb-4 mb-4 border-b">
+                        <li class="py-1">
+                          <div class="flex items-center justify-between">
+                            <div class="flex justify-start gap-2 text-xs">
+                              <input
+                                form="collectionFiltersFormMobile"
+                                type="checkbox"
+                                name="{{ filter.param_name }}"
+                                id="filter-mobile-{{ filter.param_name }}-true"
+                                class="text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground rounded peer"
+                                value="{{ filter.true_value.value }}"
+                                {% if filter.true_value.active %}
+                                  checked
+                                {% endif %}
+                                {% if filter.true_value.count == 0 and filter.true_value.active == false %}
+                                  disabled
+                                {% endif %}
+                              >
+                              <label
+                                for="filter-mobile-{{ filter.param_name }}-true"
+                                class="text-sm cursor-pointer peer-focus-visible:underline"
+                              >
+                                {{ filter.true_value.label }}
+                              </label>
+                            </div>
+                            <div class="text-xs text-gray-600">{{ filter.true_value.count }}</div>
+                          </div>
+                        </li>
+                        <li class="py-1">
+                          <div class="flex items-center justify-between">
+                            <div class="flex justify-start gap-2 text-xs">
+                              <input
+                                form="collectionFiltersFormMobile"
+                                type="checkbox"
+                                name="{{ filter.param_name }}"
+                                id="filter-mobile-{{ filter.param_name }}-false"
+                                class="text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground rounded peer"
+                                value="{{ filter.false_value.value }}"
+                                {% if filter.false_value.active %}
+                                  checked
+                                {% endif %}
+                                {% if filter.false_value.count == 0 and filter.false_value.active == false %}
+                                  disabled
+                                {% endif %}
+                              >
+                              <label
+                                for="filter-mobile-{{ filter.param_name }}-false"
+                                class="text-sm cursor-pointer peer-focus-visible:underline"
+                              >
+                                {{ filter.false_value.label }}
+                              </label>
+                            </div>
+                            <div class="text-xs text-gray-600">{{ filter.false_value.count }}</div>
+                          </div>
+                        </li>
+                      </ul>
+
+                    {%- when 'list' -%}
+                      <ul class="pb-4 mb-4 border-b">
+                        {%- for filter_value in filter.values -%}
+                          <li class="py-1">
+                            <div class="flex items-center justify-between">
+                              <div class="flex justify-start gap-2 text-xs">
+                                <input
+                                  form="collectionFiltersFormMobile"
+                                  type="checkbox"
+                                  name="{{ filter_value.param_name }}"
+                                  id="filter-mobile-{{ filter.param_name }}-{{ forloop.index }}"
+                                  class="text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-foreground rounded peer"
+                                  value="{{ filter_value.value }}"
+                                  {% if filter_value.active %}
+                                    checked
+                                  {% endif %}
+                                  {% if filter_value.count == 0 and filter_value.active == false %}
+                                    disabled
+                                  {% endif %}
+                                >
+                                <label
+                                  for="filter-mobile-{{ filter.param_name }}-{{ forloop.index }}"
+                                  class="text-sm cursor-pointer peer-focus-visible:underline"
+                                >
+                                  {{ filter_value.label }}
+                                </label>
+                              </div>
+                              <div class="text-xs text-gray-600">{{ filter_value.count }}</div>
+                            </div>
+                          </li>
+                        {%- endfor -%}
+                      </ul>
+
+                    {%- when 'price_range' -%}
+                      <div class="pb-4 mb-4 border-b">
+                        <div class="flex gap-2 items-center">
+                          <div class="flex-1">
+                            <label for="filter-mobile-{{ filter.min_value.param_name }}" class="text-xs text-gray-600"
+                              >From</label
+                            >
+                            <div class="flex items-center">
+                              <span class="text-xs text-gray-600 mr-1">{{ cart.currency.symbol }}</span>
+                              <input
+                                form="collectionFiltersFormMobile"
+                                type="number"
+                                name="{{ filter.min_value.param_name }}"
+                                id="filter-mobile-{{ filter.min_value.param_name }}"
+                                class="w-full text-sm border rounded px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                                {% if filter.min_value.value %}
+                                  value="{{ filter.min_value.value | money_without_currency | replace: ',', '' }}"
+                                {% endif %}
+                                placeholder="0"
+                                min="0"
+                                max="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
+                              >
+                            </div>
+                          </div>
+                          <div class="flex-1">
+                            <label for="filter-mobile-{{ filter.max_value.param_name }}" class="text-xs text-gray-600"
+                              >To</label
+                            >
+                            <div class="flex items-center">
+                              <span class="text-xs text-gray-600 mr-1">{{ cart.currency.symbol }}</span>
+                              <input
+                                form="collectionFiltersFormMobile"
+                                type="number"
+                                name="{{ filter.max_value.param_name }}"
+                                id="filter-mobile-{{ filter.max_value.param_name }}"
+                                class="w-full text-sm border rounded px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground"
+                                {% if filter.max_value.value %}
+                                  value="{{ filter.max_value.value | money_without_currency | replace: ',', '' }}"
+                                {% endif %}
+                                placeholder="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
+                                min="0"
+                                max="{{ filter.range_max | money_without_currency | replace: ',', '' }}"
+                              >
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                  {%- endcase -%}
+                </accordion-content>
+              </fieldset>
+            </accordion-item>
+          {%- endfor -%}
+        </accordion-context>
+      </form>
+    </form-sync>
+  </drawer-content>
+</drawer-context>

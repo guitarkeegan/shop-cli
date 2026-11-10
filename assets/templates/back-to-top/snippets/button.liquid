@@ -1,0 +1,51 @@
+{%- doc -%}
+  @param {string} content - The children elements of the button
+  @param {string} [attributes] - Additional attributes to be added to the button element
+  @param {string} [variant] - The variant of the button (primary or secondary), defaults to "primary"
+  @param {string} [href] - The URL to link the button to, if type is "link"
+  @param {string} [class] - Additional classes to be added to the button
+{%- enddoc -%}
+
+{%- liquid
+  assign class = class | prepend: ' ' | default: '' | prepend: ' focus-ring'
+  assign variant = variant | default: 'primary'
+
+  assign base_class = 'cursor-pointer flex gap-2 items-center justify-center no-underline transition-colors duration-150 ease-in-out disabled:cursor-not-allowed px-10 py-4.5 rounded-[calc(var(--spacing)*2.5)] text-xs text-xs--spaced'
+
+  if variant == 'primary'
+    assign base_class = base_class | append: ' text-on-primary bg-primary not-disabled:hover:bg-hover-primary not-disabled:focus-visible:bg-hover-primary not-disabled:hover:text-hover-on-primary not-disabled:focus-visible:text-hover-on-primary disabled:bg-disabled-primary disabled:text-disabled-on-primary'
+  elsif variant == 'secondary'
+    assign base_class = base_class | append: ' text-on-secondary bg-secondary not-disabled:hover:bg-hover-secondary not-disabled:focus-visible:bg-hover-secondary disabled:text-disabled-on-secondary'
+  elsif variant == 'ghost'
+    assign base_class = base_class | append: ' text-secondary bg-transparent not-disabled:hover:bg-hover-secondary not-disabled:focus-visible:bg-hover-secondary not-disabled:hover:text-on-secondary not-disabled:focus-visible:text-on-secondary disabled:text-disabled-on-secondary disabled:bg-secondary'
+  endif
+
+  assign tag = 'button'
+
+  if href != blank
+    assign tag = 'a'
+  endif
+
+  assign first_href_char = href | split: '' | first
+
+  assign is_external = false
+
+  if href contains shop.domain and href != blank
+    assign is_external = false
+  elsif href != blank and first_href_char != '/'
+    assign is_external = true
+  endif
+-%}
+{%- capture button_attributes -%}
+  {%- if href != blank %}href="{{ href }}"{% endif %}
+  {%- if is_external == true -%}target="_blank" rel="external noreferrer"{% endif %}
+  {%- capture merged_classes -%} {%- render 'class-merge', base: base_class, override: class -%} {%- endcapture -%}
+  {%- unless attributes contains 'class=' -%}class="{{ merged_classes | strip }}"{% endunless %}
+  {{ attributes }}
+{%- endcapture -%}
+
+{%- if content != blank -%}
+  <{{ tag }} {{ button_attributes | strip }}>
+    {{ content }}
+  </{{ tag }}>
+{%- endif -%}

@@ -1,0 +1,16 @@
+@reference '../entrypoints/theme.css';
+
+.featured-products .keen-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  @apply -translate-1/2 opacity-0 group-hover/slider:not-disabled:opacity-100 transition-all duration-300 group-hover/slider:-translate-3/4;
+}
+
+.featured-products .keen-arrow.keen-arrow--left {
+  left: 0;
+}
+
+.featured-products .keen-arrow.keen-arrow--right {
+  right: 0;
+}

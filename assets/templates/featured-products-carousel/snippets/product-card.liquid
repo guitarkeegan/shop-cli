@@ -1,0 +1,100 @@
+{%- doc -%}
+  @param {product} product
+  @param {color_scheme} [color_scheme]
+  @param {string} [class]
+  @param {collection} [collection] - Featured collection to highlight
+{%- enddoc -%}
+{%- liquid
+  assign color_scheme = color_scheme | default: 'default'
+  assign collection = product.metafields.general.featured_collection.value | default: product.collections.first
+-%}
+{%- if product != blank -%}
+  <div class="color-{{ color_scheme }} relative flex flex-col justify-between p-4 overflow-hidden bg-background border-2 border-muted rounded-xl min-h-90 group/card {%- if class != blank %} {{ class }} {% endif -%}">
+    <div class="relative z-10 grid grid-cols-[1fr_auto] w-full">
+      {%- if collection -%}
+        <h3 class="m-0 text-[13px] font-manrope font-semibold tracking-widest uppercase text-accent-1 self-center">
+          <a href="{{ collection.url }}">{{ collection.title }}</a>
+        </h3>
+      {%- endif -%}
+      {%- render 'product-tag', product: product -%}
+    </div>
+    <div class="relative z-10 flex justify-between">
+      <div class="flex flex-col gap-1 text-background">
+        {%- comment -%}
+          <div class="flex m-0 text-base text-yellow-500">
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+            <i class="fa-solid fa-star"></i>
+          </div>
+        {%- endcomment -%}
+        <p class="m-0 text-base font-bold">
+          <a href="{{ product.url }}" class="text-background!">{{ product.title }}</a>
+        </p>
+        {%- if product.variants_count > 1 -%}
+          {%- render 'product-price', min_price: product.price_min, max_price: product.price_max, class: 'text-sm' -%}
+        {%- else -%}
+          {%- render 'product-price',
+            price: product.price,
+            compare_price: product.compare_at_price,
+            class: 'text-sm'
+          -%}
+        {%- endif -%}
+      </div>
+      {%- if product.available and product.variants_count == 1 -%}
+        {%- form 'product', product, class: 'flex items-end justify-end' -%}
+          <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+          {%- capture button_content -%}
+            <i class="fa-sharp fa-solid fa-plus motion-preset-pop"></i>
+          {%- endcapture -%}
+          {%- capture button_adding -%}
+            <i class="fa-sharp fa-solid fa-spinner-third motion-preset-spin"></i>
+          {%- endcapture -%}
+          {%- capture button_added -%}
+            <i class="fa-sharp fa-solid fa-check motion-preset-pop"></i>
+          {%- endcapture -%}
+          {%- capture button_error -%}
+            <i class="fa-sharp fa-solid fa-xmark motion-preset-pop"></i>
+          {%- endcapture -%}
+          {%- render 'add-to-cart-action',
+            content: button_content,
+            adding: button_adding,
+            added: button_added,
+            error: button_error,
+            variant: 'secondary',
+            class: 'rounded-full px-2 py-2 min-w-12 min-h-12 w-12 h-12 group/button self-end'
+          -%}
+        {%- endform -%}
+      {%- else -%}
+        {%- capture button_content -%}
+          <i class="fa-sharp fa-solid fa-arrow-right group-hover/button:animate-bounce-x"></i>
+        {%- endcapture -%}
+        {%- render 'button',
+          variant: 'secondary',
+          content: button_content,
+          class: 'rounded-full px-2 py-2 min-w-12 min-h-12 w-12 h-12 group/button self-end',
+          href: product.url
+        -%}
+      {%- endif -%}
+    </div>
+    <div class="absolute top-0 left-0 z-0 w-full h-full">
+      <div class="absolute top-0 left-0 z-1 w-full h-full bg-linear-to-t from-black/40 to-black/0 to-50%"></div>
+      {%- if product.featured_image -%}
+        {{
+          product.featured_image
+          | image_url: width: 500
+          | image_tag:
+            class: 'object-cover w-full h-full relative z-0 transition-transform duration-300 ease-in-out group-hover/card:scale-110'
+        }}
+      {%- else -%}
+        <img
+          src="https://placehold.co/300x350"
+          width="300"
+          height="350"
+          alt=""
+          class="object-cover w-full h-full relative z-0 transition-transform duration-300 ease-in-out group-hover/card:scale-110"
+        >
+      {%- endif -%}
+    </div>
+  </div>
+{%- endif -%}

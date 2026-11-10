@@ -1,0 +1,40 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    # Remove the go generate line if you don't use it
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    binary: shop
+    main: ./cmd
+
+archives:
+  - name_template: >-
+      {{ .ProjectName }}_
+      {{- .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  github:
+    owner: guitarkeegan # Replace with your GitHub org/username
+    name: shop-cli # Replace with your repo name
+  # For private repos, make sure GITHUB_TOKEN is set

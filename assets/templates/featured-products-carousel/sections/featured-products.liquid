@@ -1,0 +1,107 @@
+{% liquid
+  assign color_scheme = section.settings.color_scheme
+  assign padding_top = section.settings.padding_top
+  assign padding_bottom = section.settings.padding_bottom
+  assign products = section.settings.products
+  assign title = section.settings.text
+%}
+
+{%- capture config -%}
+  {
+    "mode": "free-snap",
+    "loop": false,
+    "slides": {
+      "perView": "auto",
+      "spacing": 16
+    }
+  }
+{%- endcapture -%}
+
+<div
+  class="color-{{ color_scheme }} pt-(--default--padding--top) pb-(--default--padding--bottom) overflow-hidden relative"
+  style="--default--padding--top: {{ padding_top }}px; --default--padding--bottom: {{ padding_bottom }}px;"
+>
+  <div class="container overflow-visible">
+    <h2 class="mb-4 text-left uppercase text-3xl">{{ title }}</h2>
+    <keen-slider
+      class="keen-slider group/slider overflow-visible!"
+      config="{{ config | escape }}"
+    >
+      <keen-slider-navigation-arrows
+        target="#shopify-section-{{ section.id }}"
+        is-hidden="true"
+        class="keen-arrows"
+      >
+        <template prev-arrow>
+          <i class="fa-sharp fa-solid fa-chevron-left"></i>
+        </template>
+        <template next-arrow>
+          <i class="fa-sharp fa-solid fa-chevron-right"></i>
+        </template>
+      </keen-slider-navigation-arrows>
+      {% for product in products %}
+        <div class="keen-slider__slide min-w-70 max-w-70">
+          {% render 'product-card', product: product %}
+        </div>
+      {% endfor %}
+    </keen-slider>
+  </div>
+</div>
+
+{%- render 'asset', entry: '@sections/featured-products.ts' -%}
+
+{% schema %}
+{
+  "name": "Featured products",
+  "class": "featured-products",
+  "settings": [
+    {
+      "type": "text",
+      "id": "text",
+      "label": "Title",
+      "default": "Featured Products"
+    },
+    {
+      "type": "product_list",
+      "id": "products",
+      "label": "Products"
+    },
+    {
+      "type": "header",
+      "content": "t:sections.general.theme.header"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:sections.all.colors.label",
+      "info": "t:sections.all.colors.has_cards_info",
+      "default": "Primary"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding.padding_top",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "t:sections.all.padding.padding_bottom",
+      "default": 36
+    }
+  ],
+  "presets": [
+    {
+      "name": "Featured products"
+    }
+  ]
+}
+{% endschema %}

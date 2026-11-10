@@ -1,0 +1,10 @@
+.DS_Store
+/sections
+/snippets
+/blocks
+/tmp
+/prac-examples
+.envrc
+# Added by goreleaser init:
+dist/
+logs

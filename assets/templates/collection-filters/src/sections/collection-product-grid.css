@@ -1,0 +1,29 @@
+/* Mobile filters drawer - configure for bottom slide animation */
+#collectionFiltersDrawer drawer-content {
+  --drawer--position: bottom;
+  --drawer--slide-from: 100%;
+  --drawer--slide-to: 0%;
+  transition-property: transform;
+  transition-duration: 0.35s;
+  /* Initial position off-screen */
+  transform: translateY(100%);
+}
+
+/* Hide backdrop when drawer is closed - let drawer component handle transitions */
+#collectionFiltersDrawer:not([is-open='true']) drawer-backdrop {
+  pointer-events: none !important;
+}
+
+/* Ensure accordion triggers are clickable inside drawer */
+#collectionFiltersDrawer accordion-trigger,
+#collectionFiltersDrawer accordion-trigger * {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Ensure accordion triggers are clickable inside drawer */
+#collectionFiltersDrawer accordion-trigger,
+#collectionFiltersDrawer accordion-trigger * {
+  pointer-events: auto;
+  cursor: pointer;
+}
