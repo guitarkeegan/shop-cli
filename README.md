@@ -5,8 +5,7 @@ The purpose of this CLI tool is to make the creation of themes, just a bit easie
 ## Install
 
 ```bash
-export GITHUB_TOKEN=your_token
-curl -sf https://raw.githubusercontent.com/guitarkeegan/shop-cli/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/guitarkeegan/shop-cli/main/install.sh | bash
 ```
 
 ## Development
