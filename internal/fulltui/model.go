@@ -59,9 +59,9 @@ func (m model) restart() (model, tea.Cmd) {
 	return fresh, fresh.fileModel.Init()
 }
 
-// newViewport sizes the preview pane to the right half of the window.
+// newViewport creates the preview viewport, sized to the right pane.
 func (m model) newViewport() viewport.Model {
-	return viewport.New((m.width/2)-4, m.height-6)
+	return viewport.New(m.previewSize())
 }
 
 func (m model) fileName() string {

@@ -2,6 +2,7 @@ package fulltui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
@@ -102,17 +103,16 @@ func withPageTitle(t string, view string) string {
 }
 
 var (
-	// Overall doc style (optional, just for padding/margins)
+	// Outer padding around the split screen.
 	docStyle = lipgloss.NewStyle().
 			Padding(1, 2)
 
-	// Left pane (main app)
+	// Left pane (forms).
 	leftPaneStyle = lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder()).
-			BorderRight(true).
 			Padding(0, 1)
 
-	// Right pane (preview)
+	// Right pane (live preview).
 	rightPaneStyle = lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder()).
 			Padding(0, 1)
@@ -123,8 +123,51 @@ var (
 			Italic(true)
 )
 
-// Takes in two Views, the first will be the one on the left.
-// The second will be on the right.
+// previewHelp sits above the preview, followed by a blank line.
+const (
+	previewHelp      = "j/k or ↑/↓ to scroll"
+	previewHelpLines = 2
+)
+
+// paneLayout is the size of each pane's content area, excluding borders.
+type paneLayout struct {
+	leftWidth, rightWidth, height int
+}
+
+// layout splits the window into two panes that, with their borders and the
+// outer padding, exactly fill it. lipgloss adds borders outside a style's
+// Width and Height, so they are subtracted here.
+func (m model) layout() paneLayout {
+	frameW, frameH := docStyle.GetFrameSize()
+	borderW := leftPaneStyle.GetHorizontalBorderSize() + rightPaneStyle.GetHorizontalBorderSize()
+
+	contentW := max(m.width-frameW-borderW, 0)
+	return paneLayout{
+		leftWidth:  contentW / 2,
+		rightWidth: contentW - contentW/2,
+		height:     max(m.height-frameH-leftPaneStyle.GetVerticalBorderSize(), 0),
+	}
+}
+
+// previewSize is the viewport size that fits inside the right pane, below
+// the help text.
+func (m model) previewSize() (width, height int) {
+	l := m.layout()
+	return max(l.rightWidth-rightPaneStyle.GetHorizontalPadding(), 0),
+		max(l.height-rightPaneStyle.GetVerticalPadding()-previewHelpLines, 0)
+}
+
+// clip cuts s to at most n lines, so a tall form can't push the layout
+// past the bottom of the window.
+func clip(s string, n int) string {
+	lines := strings.Split(s, "\n")
+	if len(lines) > n {
+		lines = lines[:n]
+	}
+	return strings.Join(lines, "\n")
+}
+
+// splitScreen renders the left view beside the right one, filling the window.
 func (m model) splitScreen(views ...func() string) string {
 	if len(views) < 2 {
 		return "split screen needs two views!"
@@ -134,29 +177,17 @@ func (m model) splitScreen(views ...func() string) string {
 		return "loading..."
 	}
 
-	leftWidth := m.width / 2
-	rightWidth := m.width - leftWidth
+	l := m.layout()
 
 	left := leftPaneStyle.
-		Width(leftWidth).
-		Height(m.height - 2). // small fudge for padding/borders; tweak as needed
-		Render(views[0]())
-
-	// Add help text at the top of the preview pane
-	helpText := helpTextStyle.Render("j/k or ↑/↓ to scroll")
-	previewContent := fmt.Sprintf("%s\n\n%s", helpText, views[1]())
+		Width(l.leftWidth).
+		Height(l.height).
+		Render(clip(views[0](), l.height))
 
 	right := rightPaneStyle.
-		Width(rightWidth).
-		Height(m.height - 2).
-		Render(previewContent)
+		Width(l.rightWidth).
+		Height(l.height).
+		Render(clip(helpTextStyle.Render(previewHelp)+"\n\n"+views[1](), l.height))
 
-	content := lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		left,
-		right,
-	)
-
-	// Optional outer padding
-	return docStyle.Render(content)
+	return docStyle.Render(lipgloss.JoinHorizontal(lipgloss.Top, left, right))
 }
