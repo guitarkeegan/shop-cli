@@ -1,34 +1,14 @@
 package fulltui
 
 import (
-	"context"
-
 	tea "github.com/charmbracelet/bubbletea"
-	renderservice "github.com/guitarkeegan/shop-cli/internal/render-service"
+	"github.com/guitarkeegan/shop-cli/internal/render"
+	"github.com/guitarkeegan/shop-cli/internal/theme"
 )
 
 type previewMsg struct {
 	Preview string
 	Err     error
-}
-
-func previewCmd(render func() (string, error)) tea.Cmd {
-	return func() tea.Msg {
-		preview, err := render()
-		return previewMsg{Preview: preview, Err: err}
-	}
-}
-
-func showFilePreviewCmd(ctx context.Context, opts ...renderservice.SectionServiceOption) tea.Cmd {
-	return previewCmd(func() (string, error) { return renderservice.CreateSectionPreview(ctx, opts...) })
-}
-
-func showBlockPreviewCmd(ctx context.Context, opts ...renderservice.RenderBlockServiceOption) tea.Cmd {
-	return previewCmd(func() (string, error) { return renderservice.CreateBlockPreview(ctx, opts...) })
-}
-
-func showSnippetPreviewCmd(ctx context.Context, opts ...renderservice.SnippetOption) tea.Cmd {
-	return previewCmd(func() (string, error) { return renderservice.CreateSnippetPreview(ctx, opts...) })
 }
 
 // fileCreatedMsg reports the result of writing a file. The program quits on
@@ -38,21 +18,58 @@ type fileCreatedMsg struct {
 	err  error
 }
 
-func createFileCmd(create func() (string, error)) tea.Cmd {
+// fileType returns the kind of file being built: "section", "block" or "snippet".
+func (m model) fileType() string {
+	return m.fileModel.GetString(typeKey)
+}
+
+// render renders the file being built from the answers so far.
+func (m model) render() (string, error) {
+	switch m.fileType() {
+	case "section":
+		return render.Section(
+			render.WithSectionName(m.fileName()),
+			render.WithSectionSettings(m.settings),
+			render.WithSectionBlocks(m.blockSettings),
+		)
+	case "block":
+		return render.Block(
+			render.WithBlockName(m.fileName()),
+			render.WithBlockSettings(m.settings),
+		)
+	case "snippet":
+		return render.Snippet(
+			render.WithSnippetDescription(m.snippetDoc.Description),
+			render.WithSnippetExample(m.snippetDoc.Example),
+			render.WithSnippetParams(m.snippetDoc.shopifyParams()),
+		), nil
+	}
+	return "", nil
+}
+
+// previewCmd renders the file for the preview pane.
+func (m model) previewCmd() tea.Cmd {
 	return func() tea.Msg {
-		path, err := create()
-		return fileCreatedMsg{path: path, err: err}
+		preview, err := m.render()
+		return previewMsg{Preview: preview, Err: err}
 	}
 }
 
-func createSectionCmd(ctx context.Context, opts ...renderservice.SectionServiceOption) tea.Cmd {
-	return createFileCmd(func() (string, error) { return renderservice.CreateSection(ctx, opts...) })
-}
+// createCmd renders the file and writes it into the theme.
+func (m model) createCmd() tea.Cmd {
+	return func() tea.Msg {
+		content, err := m.render()
+		if err != nil {
+			return fileCreatedMsg{err: err}
+		}
 
-func createBlockCmd(ctx context.Context, opts ...renderservice.RenderBlockServiceOption) tea.Cmd {
-	return createFileCmd(func() (string, error) { return renderservice.CreateBlock(ctx, opts...) })
-}
+		write := map[string]func(name, content string) (string, error){
+			"section": theme.WriteSection,
+			"block":   theme.WriteBlock,
+			"snippet": theme.WriteSnippet,
+		}[m.fileType()]
 
-func createSnippetCmd(ctx context.Context, opts ...renderservice.SnippetOption) tea.Cmd {
-	return createFileCmd(func() (string, error) { return renderservice.CreateSnippet(ctx, opts...) })
+		path, err := write(m.fileName(), content)
+		return fileCreatedMsg{path: path, err: err}
+	}
 }

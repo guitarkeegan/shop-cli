@@ -1,25 +1,10 @@
+// Package fulltui is the full-screen interactive builder for sections,
+// blocks and snippets, with a live preview of the generated file.
 package fulltui
 
 import (
-	"fmt"
-	"os"
-
 	tea "github.com/charmbracelet/bubbletea"
 )
-
-var dbg = func() func(format string, as ...any) {
-	if os.Getenv("DEBUG") == "" {
-		return func(format string, as ...any) {}
-	}
-	return func(format string, as ...any) {
-		f, err := os.OpenFile("shop-cli-logs", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-		if err != nil {
-			return
-		}
-		defer f.Close()
-		fmt.Fprintf(f, format+"\n", as...)
-	}
-}()
 
 // Run starts the interactive file builder. It returns the path of the
 // created file, or "" if the user quit without creating one.

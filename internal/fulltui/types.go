@@ -1,24 +1,31 @@
 package fulltui
 
-import "fmt"
+import "github.com/guitarkeegan/shop-cli/internal/shopify"
 
+// param is a snippet doc param as entered in the form.
 type param struct {
-	Name        string `json:"name"`
-	Type        string `json:"type"`
-	Description string `json:"description"`
-	Required    bool   `json:"-"`
+	Name        string
+	Type        string
+	Description string
+	Required    bool
 }
 
-func (p param) String() string {
-	return fmt.Sprintf("\nName: %s\nType: %s\nDescription: %s\nRequired: %t\n", p.Name, p.Type, p.Description, p.Required)
-}
-
+// snippetDoc collects the answers for a snippet's {% doc %} block.
 type snippetDoc struct {
-	Description string  `json:"description"`
-	Example     string  `json:"example"`
-	Param       []param `json:"params"`
+	Description string
+	Example     string
+	Param       []param
 }
 
-func (sd *snippetDoc) String() string {
-	return fmt.Sprintf("Description: %s, Example: %s, Param: %+v", sd.Description, sd.Example, sd.Param)
+func (sd snippetDoc) shopifyParams() []shopify.Param {
+	params := make([]shopify.Param, len(sd.Param))
+	for i, p := range sd.Param {
+		params[i] = shopify.Param{
+			Type:        shopify.ParamTypeFromString(p.Type),
+			Name:        p.Name,
+			Required:    p.Required,
+			Description: p.Description,
+		}
+	}
+	return params
 }
