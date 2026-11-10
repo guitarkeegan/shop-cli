@@ -1,10 +1,12 @@
-.DS_Store
-/sections
-/snippets
-/blocks
-/tmp
-/prac-examples
+# Build output
+/tmp/
+/dist/
+
+# Files generated when running shop from the repo root (e.g. make demos)
+/sections/
+/blocks/
+/snippets/
+/src/
+
 .envrc
-# Added by goreleaser init:
-dist/
-logs
+.DS_Store

@@ -23,32 +23,29 @@ const (
 )
 
 var (
-	snakeCaseErr = errors.New("invalid liquid format, must be snake_case")
-	emptyErr     = errors.New("field cannot be empty")
+	errSnakeCase = errors.New("invalid liquid format, must be snake_case")
+	errEmpty     = errors.New("field cannot be empty")
 )
 
-var snakeCaseValidator = func() func(s string) error {
-	re := regexp.MustCompile("^[a-z_][a-z0-9_]*$")
-	return func(s string) error {
-		if re.MatchString(s) {
-			return nil
-		}
-		return snakeCaseErr
-	}
-}()
+var snakeCase = regexp.MustCompile("^[a-z_][a-z0-9_]*$")
 
-var notEmptyValidator = func() func(s string) error {
-	return func(s string) error {
-		if len(s) <= 0 {
-			return emptyErr
-		}
-		return nil
+func snakeCaseValidator(s string) error {
+	if !snakeCase.MatchString(s) {
+		return errSnakeCase
 	}
-}()
+	return nil
+}
+
+func notEmptyValidator(s string) error {
+	if s == "" {
+		return errEmpty
+	}
+	return nil
+}
 
 // User is asked to select the file type they wish to work with, give it a name
 // and select an action.
-var newFileSelector = func() *huh.Form {
+func newFileSelector() *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewSelect[string]().
@@ -75,18 +72,11 @@ var newFileSelector = func() *huh.Form {
 	).WithTheme(ShopTheme())
 }
 
-// Pass in a func() bool { return true } to skip the first question.
-// Pass another func() bool { return true } to skip the inital doc setup.
-var newSnippetDocForm = func(opt ...func() bool) *huh.Form {
-
-	var wantsParams bool
-	var wantsMoreParams bool
-	if len(opt) > 0 {
-		wantsParams = opt[0]()
-	}
-	if len(opt) > 1 {
-		wantsMoreParams = opt[1]()
-	}
+// newSnippetDocForm asks for a snippet doc param. The first form (more is
+// false) also asks whether to add params at all, and for the description.
+func newSnippetDocForm(more bool) *huh.Form {
+	wantsParams := more
+	wantsMoreParams := more
 
 	return huh.NewForm(
 		huh.NewGroup(
@@ -133,7 +123,7 @@ var newSnippetDocForm = func(opt ...func() bool) *huh.Form {
 	).WithTheme(ShopTheme())
 }
 
-var newContinueSnippetParams = func() *huh.Form {
+func newContinueSnippetParams() *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewConfirm().
@@ -143,12 +133,10 @@ var newContinueSnippetParams = func() *huh.Form {
 	).WithTheme(ShopTheme())
 }
 
-// Pass in a function that returns true to skip the first question.
-var newSettingsForm = func(opt ...func() bool) *huh.Form {
-	var wantsSettings bool
-	if len(opt) > 0 {
-		wantsSettings = opt[0]()
-	}
+// newSettingsForm asks for a setting's type, id and label. The first form
+// (more is false) also asks whether to include settings at all.
+func newSettingsForm(more bool) *huh.Form {
+	wantsSettings := more
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewConfirm().
@@ -187,19 +175,12 @@ var newSettingsForm = func(opt ...func() bool) *huh.Form {
 	).WithTheme(ShopTheme())
 }
 
-// Available options:
-//
-//  1. func () bool { return true } - to skip the 'include section blocks question'
-//  2. func () bool { return true } - to only fill in the input settings
-var newIncludingBlocksForm = func(opt ...func() bool) *huh.Form {
-	var wantsBlocks bool
-	var inputsOnly bool
-	if len(opt) > 0 {
-		wantsBlocks = opt[0]()
-	}
-	if len(opt) > 1 {
-		inputsOnly = opt[1]()
-	}
+// newIncludingBlocksForm asks for a section block and one of its settings.
+// skipPrompt skips "Include section blocks?"; settingOnly asks only for a
+// setting to add to the current block.
+func newIncludingBlocksForm(skipPrompt, settingOnly bool) *huh.Form {
+	wantsBlocks := skipPrompt
+	inputsOnly := settingOnly
 
 	return huh.NewForm(
 		huh.NewGroup(
@@ -254,8 +235,8 @@ var newIncludingBlocksForm = func(opt ...func() bool) *huh.Form {
 	).WithTheme(ShopTheme())
 }
 
-// Confirmatiom for adding more inputs.
-var newContinueSettingsForm = func() *huh.Form {
+// Confirmation for adding more inputs.
+func newContinueSettingsForm() *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewConfirm().
@@ -266,7 +247,7 @@ var newContinueSettingsForm = func() *huh.Form {
 		),
 	).WithTheme(ShopTheme())
 }
-var newAdditionalBlocksForm = func() *huh.Form {
+func newAdditionalBlocksForm() *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewConfirm().
@@ -277,7 +258,7 @@ var newAdditionalBlocksForm = func() *huh.Form {
 	).WithTheme(ShopTheme())
 }
 
-var newPreviewFileForm = func() *huh.Form {
+func newPreviewFileForm() *huh.Form {
 	return huh.NewForm(
 		huh.NewGroup(
 			huh.NewConfirm().

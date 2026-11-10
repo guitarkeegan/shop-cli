@@ -1,13 +1,10 @@
 package fulltui
 
 import (
-	"context"
-
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
-	ren "github.com/guitarkeegan/shop-cli/internal/render-service"
-	shop2 "github.com/guitarkeegan/shop-cli/internal/shopify-v2"
+	"github.com/guitarkeegan/shop-cli/internal/shopify"
 )
 
 // Model holds the state of the program. Forms are typically cleaned up,
@@ -23,8 +20,8 @@ type model struct {
 	snippetDocModel             *huh.Form
 	continueSnippetDocModel     *huh.Form
 	previewFileModel            *huh.Form
-	settings                    []shop2.Setting
-	blockSettings               []shop2.SectionBlock
+	settings                    []shopify.Setting
+	blockSettings               []shopify.SectionBlock
 	// addingToBlock is true when blockSettingsModel only asks for a setting
 	// to add to the last block, rather than for a new block.
 	addingToBlock bool
@@ -44,9 +41,9 @@ func initialModel() model {
 	return model{
 		state:         selectingFile,
 		fileModel:     fts,
-		settingsModel: newSettingsForm(),
-		settings:      make([]shop2.Setting, 0, 20),
-		blockSettings: make([]shop2.SectionBlock, 0, 20),
+		settingsModel: newSettingsForm(false),
+		settings:      make([]shopify.Setting, 0, 20),
+		blockSettings: make([]shopify.SectionBlock, 0, 20),
 		snippetDoc:    snippetDoc{},
 	}
 }
@@ -71,54 +68,9 @@ func (m model) fileName() string {
 	return m.fileModel.GetString(nameKey)
 }
 
-func (m model) sectionOpts() []ren.SectionServiceOption {
-	return []ren.SectionServiceOption{
-		ren.WithSectionBlocks(m.blockSettings),
-		ren.WithSectionName(m.fileName()),
-		ren.WithSectionSettings(m.settings),
-	}
-}
-
-func (m model) blockOpts() []ren.RenderBlockServiceOption {
-	return []ren.RenderBlockServiceOption{
-		ren.WithBlockName(m.fileName()),
-		ren.WithBlockSettings(m.settings),
-	}
-}
-
-func (m model) snippetOpts() []ren.SnippetOption {
-	params := make([]shop2.Param, len(m.snippetDoc.Param))
-	for i, p := range m.snippetDoc.Param {
-		params[i] = shop2.Param{
-			Type:        shop2.ParamTypeFromString(p.Type),
-			Name:        p.Name,
-			Required:    p.Required,
-			Description: p.Description,
-		}
-	}
-	return []ren.SnippetOption{
-		ren.WithSnippetFileName(m.fileName()),
-		ren.WithSnippetDescription(m.snippetDoc.Description),
-		ren.WithSnippetAddExample(m.snippetDoc.Example),
-		ren.WithSnippetParams(params),
-	}
-}
-
-func (m model) sectionPreviewCmd() tea.Cmd {
-	return showFilePreviewCmd(context.Background(), m.sectionOpts()...)
-}
-
-func (m model) blockPreviewCmd() tea.Cmd {
-	return showBlockPreviewCmd(context.Background(), m.blockOpts()...)
-}
-
-func (m model) snippetPreviewCmd() tea.Cmd {
-	return showSnippetPreviewCmd(context.Background(), m.snippetOpts()...)
-}
-
 // settingFromForm reads the type/id/label fields shared by the settings forms.
-func settingFromForm(f *huh.Form) shop2.Setting {
-	return shop2.Setting{
+func settingFromForm(f *huh.Form) shopify.Setting {
+	return shopify.Setting{
 		ID:    f.GetString(idKey),
 		Type:  f.GetString(inputTypeKey),
 		Label: f.GetString(labelKey),
