@@ -26,8 +26,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		if m.state.hasPreview() {
-			m.viewportModel.Width = (m.width / 2) - 4 // Account for borders/padding
-			m.viewportModel.Height = m.height - 6     // Account for borders/padding
+			m.viewportModel.Width, m.viewportModel.Height = m.previewSize()
 		}
 	case previewMsg:
 		if msg.Err != nil {
