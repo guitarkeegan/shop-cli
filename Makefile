@@ -2,7 +2,7 @@
 
 ## build: compile the shop binary to ./tmp/shop
 build:
-	go build -o tmp/shop ./cmd
+	go build -o tmp/shop ./cmd/shop
 
 ## test: run all tests
 test:

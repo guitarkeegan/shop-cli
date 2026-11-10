@@ -19,14 +19,25 @@ import (
 var ErrMissingSubcommand = errors.New("missing subcommand")
 
 func main() {
-	root := clic.NewFromFunc(runInteractive, "shop",
+	var showVersion bool
+	root := clic.NewFromFunc(runRoot(&showVersion), "shop",
 		newSectionCmd(features.New(templates.Templates)),
 		newBlockCmd(),
 		newSnippetCmd(),
 		newExamplesCmd(),
 	)
+	root.Flag(&showVersion, "v|version", "Print the version and exit.")
+
+	var showHelp bool
+	root.Recursively(func(c *clic.Clic) {
+		c.Flag(&showHelp, "h|help", "Show help for this command.")
+	})
 
 	cmd, err := root.Parse(os.Args[1:])
+	if showHelp {
+		fmt.Println(cmd.Usage())
+		return
+	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, colors.Error(err.Error()))
 		fmt.Fprintln(os.Stderr, cmd.Usage())
