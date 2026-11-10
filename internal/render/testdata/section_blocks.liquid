@@ -1,0 +1,62 @@
+{% liquid
+assign heading = section.settings.heading
+%}
+{% for block in section.blocks %}
+  {% case block.type %}
+    {% when 'slide' %}
+{% liquid
+assign image = block.settings.image
+assign caption = block.settings.caption
+%}
+    {% when 'card' %}
+{% liquid
+assign title = block.settings.title
+%}
+  {% endcase %}
+{% endfor %}
+{% schema %}
+{
+  "name": "Slideshow",
+  "settings": [
+    {
+      "id": "heading",
+      "type": "text",
+      "label": "Heading"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "Slide",
+      "type": "slide",
+      "settings": [
+        {
+          "id": "image",
+          "type": "image_picker",
+          "label": "Image"
+        },
+        {
+          "id": "caption",
+          "type": "text",
+          "label": "Caption"
+        }
+      ]
+    },
+    {
+      "name": "Card",
+      "type": "card",
+      "settings": [
+        {
+          "id": "title",
+          "type": "text",
+          "label": "Title"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Slideshow"
+    }
+  ]
+}
+{% endschema %}

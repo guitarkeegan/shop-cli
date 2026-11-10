@@ -1,0 +1,26 @@
+{% liquid
+assign heading = block.settings.heading
+assign link = block.settings.link
+%}
+{% schema %}
+{
+  "name": "Promo",
+  "settings": [
+    {
+      "id": "heading",
+      "type": "text",
+      "label": "Heading"
+    },
+    {
+      "id": "link",
+      "type": "url",
+      "label": "Link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Promo"
+    }
+  ]
+}
+{% endschema %}

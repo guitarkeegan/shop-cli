@@ -9,7 +9,7 @@ type Setting struct {
 	ID      string  `json:"id,omitempty"`
 	Type    string  `json:"type"`
 	Label   string  `json:"label,omitempty"`
-	Default *string `json:"default,omitempty"`
+	Default any     `json:"default,omitempty"` // string, number or bool, per setting type
 	Info    *string `json:"info,omitempty"`
 	Content *string `json:"content,omitempty"` // header/paragraph sidebar content
 

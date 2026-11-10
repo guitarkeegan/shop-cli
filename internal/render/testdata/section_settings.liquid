@@ -1,0 +1,35 @@
+{% liquid
+assign title = section.settings.title
+assign copy = section.settings.copy
+assign opacity = section.settings.opacity
+%}
+{% schema %}
+{
+  "name": "Hero Banner",
+  "settings": [
+    {
+      "id": "title",
+      "type": "text",
+      "label": "Title"
+    },
+    {
+      "id": "copy",
+      "type": "richtext",
+      "label": "Copy"
+    },
+    {
+      "id": "opacity",
+      "type": "range",
+      "label": "Opacity",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    }
+  ],
+  "presets": [
+    {
+      "name": "Hero Banner"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,3 @@
+# Keep LF endings so golden files compare equal on Windows.
+* text=auto eol=lf
+*.gif binary
