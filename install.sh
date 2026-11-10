@@ -1,18 +1,6 @@
 #!/bin/bash
 set -e
 
-if [[ -z $GITHUB_TOKEN ]]; then
-  echo "GITHUB_TOKEN must be set!"
-  exit 1
-fi
-
-if ! command -v jq &> /dev/null; then
-  echo "Error: jq is required but not installed"
-  echo ""
-  echo "Install jq:"
-  exit 1
-fi
-
 # Cleanup function
 cleanup() {
   local exit_code=$?
@@ -26,78 +14,47 @@ cleanup() {
 # Set trap before creating temp directory
 trap cleanup EXIT ERR INT TERM
 
-echo "found GITHUB_TOKEN..."
-
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 
+# Match goreleaser archive names (x86_64, arm64)
 case $ARCH in
-    x86_64) ARCH="amd64" ;;
+    x86_64|amd64) ARCH="x86_64" ;;
     aarch64|arm64) ARCH="arm64" ;;
-    armv7l) ARCH="armv7" ;;
-    i386|i686) ARCH="386" ;;
+    *) echo "Error: unsupported architecture ${ARCH}"; exit 1 ;;
 esac
 
 echo "OS: ${OS}, ARCH: ${ARCH}"
 
-RELEASES=$(curl -sL \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-  -H "X-GitHub-Api-Version: 2022-11-28" \
-  https://api.github.com/repos/guitarkeegan/shop-cli/releases/latest)
-
-echo "$RELEASES" | jq empty || {
-  echo "invalid json response"
-  exit 1
-}
-
+DOWNLOAD_URL="https://github.com/guitarkeegan/shop-cli/releases/latest/download"
 ARCHIVE_NAME="shop-cli_${OS}_${ARCH}.tar.gz"
-echo "searching for ${ARCHIVE_NAME}..."
-
-ASSET_ID=$(echo "$RELEASES" | jq -r \
-  ".assets[] | select(.name == \"$ARCHIVE_NAME\") | .id")
-
-if [[ -z $ASSET_ID ]]; then
-  echo "Error: ${ARCHIVE_NAME} not found in repo"
-  echo "Found archives:"
-  echo "$RELEASES" | jq -r ".assets[].name"
-  exit 1
-fi
-
-echo "Found asset ID: ${ASSET_ID}"
-
-CHECKSUM_ASSET_ID=$(echo "$RELEASES" | jq -r \
-  '.assets[] | select(.name | test("checksums.txt$")) | .id')
-
-if [[ -z $CHECKSUM_ASSET_ID ]]; then
-  echo "checksum not found!"
-  exit 1
-fi
-
-echo "retrieved checksum asset ID"
 
 mkdir -p tmpshopcli
 cd tmpshopcli
 
-curl -sL \
-  -H "Accept: application/octet-stream" \
-  -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-  -H "X-GitHub-Api-Version: 2022-11-28" \
-  -o "$ARCHIVE_NAME" \
-  "https://api.github.com/repos/guitarkeegan/shop-cli/releases/assets/${ASSET_ID}"
+echo "downloading ${ARCHIVE_NAME}..."
+curl -fsSL -o "$ARCHIVE_NAME" "${DOWNLOAD_URL}/${ARCHIVE_NAME}" || {
+  echo "Error: ${ARCHIVE_NAME} not found in latest release"
+  exit 1
+}
 
-echo "downloaded $ARCHIVE_NAME"
+# Checksum file name includes the version, so look it up from the release page redirect
+VERSION=$(curl -fsSLI -o /dev/null -w '%{url_effective}' \
+  https://github.com/guitarkeegan/shop-cli/releases/latest | sed 's#.*/tag/v##')
 
-# Download checksums
-curl -sL \
-  -H "Accept: application/octet-stream" \
-  -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-  -H "X-GitHub-Api-Version: 2022-11-28" \
-  -o "checksums.txt" \
-  "https://api.github.com/repos/guitarkeegan/shop-cli/releases/assets/${CHECKSUM_ASSET_ID}"
+curl -fsSL -o "checksums.txt" "${DOWNLOAD_URL}/shop-cli_${VERSION}_checksums.txt" || {
+  echo "checksum not found!"
+  exit 1
+}
+
+if command -v sha256sum &> /dev/null; then
+  SHA_CMD="sha256sum"
+else
+  SHA_CMD="shasum -a 256"
+fi
 
 echo "Verifying checksum..."
-grep "$ARCHIVE_NAME" checksums.txt | sha256sum -c - || {
+grep "$ARCHIVE_NAME" checksums.txt | $SHA_CMD -c - || {
   echo "✗ Checksum verification failed!"
   echo "The downloaded file may be corrupted or tampered with."
   cd ..

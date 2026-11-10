@@ -2,13 +2,10 @@ package renderservice
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/guitarkeegan/shop-cli/internal/colors"
 	shop2 "github.com/guitarkeegan/shop-cli/internal/shopify-v2"
 	"github.com/guitarkeegan/shop-cli/internal/tui"
 	"github.com/guitarkeegan/shop-cli/internal/utils"
@@ -23,53 +20,53 @@ var dbg = func() func(format string, as ...any) {
 	}
 }()
 
-var (
-	missingSnippetDirErr = errors.New("No 'snippets' dir found. Are you at the top level of the project?")
-)
-
 type SnippetService struct {
 	FileName    string
 	UseTemplate bool
 	Snippet     shop2.Snippet
 }
 
-// Return the string representation fo the SnippetService
-// not handling errors currently
+// String renders the snippet's {% doc %} block. It returns an empty string
+// when there is nothing to document.
 func (s *SnippetService) String() string {
+	sn := s.Snippet
+	if sn.DocText == "" && sn.Description == "" && len(sn.Params) == 0 && len(sn.Examples) == 0 {
+		return ""
+	}
+
 	var doc strings.Builder
-
 	doc.WriteString("{% doc %}\n")
-	doc.WriteString(s.Snippet.DocText)
-	doc.WriteString("\n\n")
 
-	for _, param := range s.Snippet.Params {
+	if sn.DocText != "" {
+		doc.WriteString(sn.DocText)
+		doc.WriteString("\n\n")
+	}
+
+	for _, param := range sn.Params {
 		doc.WriteString("@param {")
-		doc.WriteString(shop2.ParamTypeToString[int(param.Type)])
+		doc.WriteString(param.Type.String())
 		doc.WriteString("} ")
-
 		if param.Required {
 			doc.WriteString(param.Name)
-			doc.WriteString(" - ")
-			doc.WriteString(param.Description)
 		} else {
-			doc.WriteByte('[')
-			doc.WriteString(param.Name)
-			doc.WriteByte(']')
+			doc.WriteString("[" + param.Name + "]")
+		}
+		if param.Description != "" {
 			doc.WriteString(" - ")
 			doc.WriteString(param.Description)
 		}
 		doc.WriteByte('\n')
 	}
 
-	for _, example := range s.Snippet.Examples {
-		doc.WriteString("@example\n")
+	for _, example := range sn.Examples {
+		doc.WriteString("\n@example\n")
 		doc.WriteString(example)
-		doc.WriteString("\n\n")
+		doc.WriteByte('\n')
 	}
 
-	if s.Snippet.Description != "" {
-		doc.WriteString("@description - ")
-		doc.WriteString(s.Snippet.Description)
+	if sn.Description != "" {
+		doc.WriteString("\n@description - ")
+		doc.WriteString(sn.Description)
 		doc.WriteByte('\n')
 	}
 
@@ -119,8 +116,12 @@ func WithSnippetTemplate(useTemplate bool) SnippetOption {
 	}
 }
 
+// WithSnippetAddExample adds an @example. Blank examples are ignored.
 func WithSnippetAddExample(example string) SnippetOption {
 	return func(s *SnippetService) {
+		if strings.TrimSpace(example) == "" {
+			return
+		}
 		s.Snippet.Examples = append(s.Snippet.Examples, example)
 	}
 }
@@ -143,34 +144,25 @@ func parseRequired(arg string) (string, bool) {
 	}
 }
 
-// Use this to transform the string passed via the cli version
+// ExtractShopifyParams parses CLI params like "title:string,image?:object,copy".
+// A trailing "?" on the name marks the param optional; the type defaults to string.
 func (s *SnippetService) ExtractShopifyParams(cliArgs string) []shop2.Param {
-	paramSeq := strings.SplitSeq(cliArgs, ",")
-	// wild guess for capacity
-	params := make([]shop2.Param, 0, 50)
+	var params []shop2.Param
 
-	for param := range paramSeq {
+	for param := range strings.SplitSeq(cliArgs, ",") {
 		trimmed := strings.TrimSpace(param)
-		variable, typ, hasColon := strings.Cut(trimmed, ":")
-		trimmedVariable, required := parseRequired(variable)
-		if hasColon {
-			params = append(params, shop2.Param{
-				Type:     shop2.ParamTypeFromString(typ),
-				Name:     trimmedVariable,
-				Required: required,
-			})
-		} else {
-			trimmedVariable, required = parseRequired(param)
-			params = append(params, shop2.Param{
-				Type:        shop2.ParamTypeFromString(""),
-				Name:        trimmedVariable,
-				Required:    required,
-				Description: "",
-			})
+		if trimmed == "" {
+			continue
 		}
+		variable, typ, _ := strings.Cut(trimmed, ":")
+		name, required := parseRequired(strings.TrimSpace(variable))
+		params = append(params, shop2.Param{
+			Type:     shop2.ParamTypeFromString(strings.TrimSpace(typ)),
+			Name:     name,
+			Required: required,
+		})
 	}
 	return params
-
 }
 
 // use this to pass in the command line args
@@ -180,98 +172,51 @@ func WithSnippetParamsAsString(params string) SnippetOption {
 	}
 }
 
-var CreateSnippet = func(ctx context.Context, opts ...SnippetOption) func(ctx context.Context) error {
-	return func(ctx context.Context) error {
-
-		if !utils.FolderExistsInPwd("snippets") {
-			return missingSnippetDirErr
-		}
-
-		snip := NewSnippetService()
-		for _, opt := range opts {
-			opt(snip)
-		}
-
-		if snip.FileName == "" {
-			return missingNameErr
-		}
-
-		path := filepath.Join("snippets", utils.Handlize(snip.FileName)+".liquid")
-		if utils.FileExists(path) {
-			path = utils.EnsureUniqueFilename(path)
-		}
-
-		var liquidTemplate string
-		if snip.UseTemplate {
-			// returns abs path
-			tempPath, err := tui.Run()
-			if err != nil {
-				return err
-			}
-			fmt.Println(colors.BoldGreen(tempPath))
-			if tempPath != "" {
-				tFile, err := os.ReadFile(tempPath)
-				if err != nil {
-					panic("could not read from template!")
-				}
-				liquidTemplate = string(tFile)
-			}
-		}
-
-		if snip.Snippet.Params == nil {
-			if len(liquidTemplate) > 0 {
-				if err := os.WriteFile(path, []byte(liquidTemplate), 0o644); err != nil {
-					return fmt.Errorf("handleCreateSnippet: write file: %w", err)
-				}
-
-				fmt.Println(colors.Success("new snippet created!"))
-				return nil
-			}
-			if err := os.WriteFile(path, nil, 0o644); err != nil {
-				return fmt.Errorf("handleCreateSnippet: write file: %w", err)
-			}
-			fmt.Println(colors.Success("New Snippet Created!"))
-			fmt.Println(colors.Success(snip.FileName))
-			return nil
-		}
-
-		if err := os.WriteFile(path, []byte(snip.String()+liquidTemplate+"\n"), 0o644); err != nil {
-			return fmt.Errorf("handleCreateSnippet: write file with params: %w", err)
-		}
-
-		fmt.Println(colors.Success("New Snippet Created!"))
-		fmt.Println(colors.Success(snip.FileName))
-		return nil
-	}
-}
-
-var CreateSnippetPreview = func(ctx context.Context, opts ...SnippetOption) (string, error) {
-
+// CreateSnippet renders a snippet and writes it to snippets/<handle>.liquid.
+// With a template, the picked file's contents follow the doc block.
+// It returns the path of the created file.
+func CreateSnippet(ctx context.Context, opts ...SnippetOption) (string, error) {
 	snip := NewSnippetService()
 	for _, opt := range opts {
 		opt(snip)
 	}
 
 	if snip.FileName == "" {
-		return "", missingNameErr
+		return "", ErrMissingName
+	}
+	if !utils.FolderExistsInPwd("snippets") {
+		return "", ErrMissingSnippetsDir
 	}
 
-	// var liquidTemplate string
-	// if snip.UseTemplate {
-	// 	// returns abs path
-	// 	tempPath, err := tui.Run()
-	// 	if err != nil {
-	// 		return "", err
-	// 	}
-	// 	fmt.Println(colors.BoldGreen(tempPath))
-	// 	if tempPath != "" {
-	// 		tFile, err := os.ReadFile(tempPath)
-	// 		if err != nil {
-	// 			return "", err
-	// 		}
-	// 		liquidTemplate = string(tFile)
-	// 	}
-	// }
+	content := snip.String()
+
+	if snip.UseTemplate {
+		tempPath, err := tui.Run()
+		if err != nil {
+			return "", err
+		}
+		if tempPath != "" {
+			tFile, err := os.ReadFile(tempPath)
+			if err != nil {
+				return "", fmt.Errorf("read template %s: %w", tempPath, err)
+			}
+			content += string(tFile) + "\n"
+		}
+	}
+
+	return writeLiquid("snippets", snip.FileName, content)
+}
+
+// CreateSnippetPreview renders a snippet without writing it. Use this within a TUI.
+func CreateSnippetPreview(ctx context.Context, opts ...SnippetOption) (string, error) {
+	snip := NewSnippetService()
+	for _, opt := range opts {
+		opt(snip)
+	}
+
+	if snip.FileName == "" {
+		return "", ErrMissingName
+	}
 
 	return snip.String(), nil
 }

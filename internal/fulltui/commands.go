@@ -12,72 +12,47 @@ type previewMsg struct {
 	Err     error
 }
 
-func showFilePreviewCmd(ctx context.Context, opts ...renderservice.SectionServiceOption) tea.Cmd {
+func previewCmd(render func() (string, error)) tea.Cmd {
 	return func() tea.Msg {
-		preview, err := renderservice.CreateSectionPreview(ctx, opts...)
-		return previewMsg{
-			Preview: preview,
-			Err:     err,
-		}
+		preview, err := render()
+		return previewMsg{Preview: preview, Err: err}
 	}
+}
+
+func showFilePreviewCmd(ctx context.Context, opts ...renderservice.SectionServiceOption) tea.Cmd {
+	return previewCmd(func() (string, error) { return renderservice.CreateSectionPreview(ctx, opts...) })
+}
+
+func showBlockPreviewCmd(ctx context.Context, opts ...renderservice.RenderBlockServiceOption) tea.Cmd {
+	return previewCmd(func() (string, error) { return renderservice.CreateBlockPreview(ctx, opts...) })
 }
 
 func showSnippetPreviewCmd(ctx context.Context, opts ...renderservice.SnippetOption) tea.Cmd {
-	return func() tea.Msg {
-		preview, err := renderservice.CreateSnippetPreview(ctx, opts...)
-		return previewMsg{
-			Preview: preview,
-			Err:     err,
-		}
-	}
+	return previewCmd(func() (string, error) { return renderservice.CreateSnippetPreview(ctx, opts...) })
 }
 
-type isFirstUpdateMsg bool
-
-func isFirstUpdateCmd(isFirstUpdate bool) func() tea.Msg {
-	return func() tea.Msg {
-		return isFirstUpdateMsg(isFirstUpdate)
-	}
+// fileCreatedMsg reports the result of writing a file. The program quits on
+// receiving it, and Run reports the path or error once the screen is restored.
+type fileCreatedMsg struct {
+	path string
+	err  error
 }
 
-type isFirstBlockMsg bool
-
-func isFirstBlockCmd(isFirstBlock bool) func() tea.Msg {
+func createFileCmd(create func() (string, error)) tea.Cmd {
 	return func() tea.Msg {
-		return isFirstBlockMsg(isFirstBlock)
+		path, err := create()
+		return fileCreatedMsg{path: path, err: err}
 	}
 }
-
-type isAdditionalUpdateMsg bool
-
-func isAdditionalUpdateCmd(isAdditionalUpdate bool) func() tea.Msg {
-	return func() tea.Msg {
-		return isAdditionalUpdateMsg(isAdditionalUpdate)
-	}
-}
-
-type createSectionMsg struct{}
 
 func createSectionCmd(ctx context.Context, opts ...renderservice.SectionServiceOption) tea.Cmd {
-	return func() tea.Msg {
-		err := renderservice.CreateSection(ctx, opts...)(ctx)
-		if err != nil {
-			dbg("panic: %s", err)
-			panic("create section failed")
-		}
-		return createSectionMsg{}
-	}
+	return createFileCmd(func() (string, error) { return renderservice.CreateSection(ctx, opts...) })
 }
 
-type createSnippetMsg struct{}
+func createBlockCmd(ctx context.Context, opts ...renderservice.RenderBlockServiceOption) tea.Cmd {
+	return createFileCmd(func() (string, error) { return renderservice.CreateBlock(ctx, opts...) })
+}
 
 func createSnippetCmd(ctx context.Context, opts ...renderservice.SnippetOption) tea.Cmd {
-	return func() tea.Msg {
-		err := renderservice.CreateSnippet(ctx, opts...)(ctx)
-		if err != nil {
-			dbg("panic: %s", err)
-			panic("create snippet failed")
-		}
-		return createSectionMsg{}
-	}
+	return createFileCmd(func() (string, error) { return renderservice.CreateSnippet(ctx, opts...) })
 }

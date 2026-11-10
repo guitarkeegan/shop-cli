@@ -3,19 +3,11 @@ package renderservice
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
 	"strings"
 
 	shop2 "github.com/guitarkeegan/shop-cli/internal/shopify-v2"
 	"github.com/guitarkeegan/shop-cli/internal/utils"
-)
-
-var (
-	ErrNoSettingString = errors.New("settings string required")
 )
 
 type SectionService struct {
@@ -126,21 +118,6 @@ func WithSectionPresets(presets []shop2.Preset) SectionServiceOption {
 	}
 }
 
-func WithSectionBlocksString(blocks []string) SectionServiceOption {
-	return func(ss *SectionService) {
-		// parse each block
-		bs := make([]shop2.SectionBlock, 0, len(blocks))
-		for _, blockStr := range blocks {
-			parsedBlock, err := parseBlockString(blockStr)
-			if err != nil {
-				log.Fatalf("unparsable block string: %v\n", err)
-			}
-			bs = append(bs, parsedBlock)
-		}
-		ss.Section.Schema.Blocks = bs
-	}
-}
-
 func WithDefaults() SectionServiceOption {
 	return func(ss *SectionService) {
 		paddingInputs := shop2.NewSectionPaddingSettings()
@@ -151,31 +128,41 @@ func WithDefaults() SectionServiceOption {
 	}
 }
 
+// ParseBlockStrings parses each -b flag value into a SectionBlock.
+func ParseBlockStrings(blocks []string) ([]shop2.SectionBlock, error) {
+	parsed := make([]shop2.SectionBlock, 0, len(blocks))
+	for _, b := range blocks {
+		block, err := parseBlockString(b)
+		if err != nil {
+			return nil, err
+		}
+		parsed = append(parsed, block)
+	}
+	return parsed, nil
+}
+
 // parseBlockString parses a block string in the format:
 // "blockName,settingType:settingID:settingLabel,settingType:settingID:settingLabel"
 // Returns a SectionBlock with the parsed name, type, and settings
 func parseBlockString(blockStr string) (shop2.SectionBlock, error) {
-	// Split by comma to separate block name from settings
 	parts := strings.Split(blockStr, ",")
-	if len(parts) == 0 {
-		return shop2.SectionBlock{}, nil
-	}
 
-	// First part is the block name
 	blockName := strings.TrimSpace(parts[0])
 	blockType := utils.Handlize(blockName)
+	if blockType == "" {
+		return shop2.SectionBlock{}, fmt.Errorf("%w %q: expected \"name,type:id:label,...\"", ErrInvalidBlock, blockStr)
+	}
 
-	// Parse settings from remaining parts
 	settings := make([]shop2.Setting, 0, len(parts)-1)
-	for i := 1; i < len(parts); i++ {
-		settingStr := strings.TrimSpace(parts[i])
+	for _, part := range parts[1:] {
+		settingStr := strings.TrimSpace(part)
 		if settingStr == "" {
 			continue
 		}
 
 		setting, err := ParseSettingString(settingStr)
 		if err != nil {
-			return shop2.SectionBlock{}, err
+			return shop2.SectionBlock{}, fmt.Errorf("block %q: %w", blockName, err)
 		}
 		settings = append(settings, setting)
 	}
@@ -187,40 +174,40 @@ func parseBlockString(blockStr string) (shop2.SectionBlock, error) {
 	}, nil
 }
 
+// ParseSettingStrings parses a comma separated list of "type:id:label" settings.
+// An empty string is valid and returns no settings.
 func ParseSettingStrings(settingStrs string) ([]shop2.Setting, error) {
-
-	if settingStrs == "" {
-		return []shop2.Setting{}, ErrNoSettingString
-	}
-
-	var err error
-	settings := strings.Split(settingStrs, ",")
-	parsedSettings := make([]shop2.Setting, len(settings))
-	for i, setting := range settings {
-		parsedSettings[i], err = ParseSettingString(setting)
+	var parsed []shop2.Setting
+	for _, settingStr := range strings.Split(settingStrs, ",") {
+		if strings.TrimSpace(settingStr) == "" {
+			continue
+		}
+		setting, err := ParseSettingString(settingStr)
 		if err != nil {
 			return nil, err
 		}
+		parsed = append(parsed, setting)
 	}
-	return parsedSettings, nil
+	return parsed, nil
 }
 
-// ParseSettingString parses a setting string in the format "type:id:label"
-// Returns a Setting with the specified type, id, and label
+// ParseSettingString parses a setting string in the format "type:id:label".
+// The label may itself contain colons.
 func ParseSettingString(settingStr string) (shop2.Setting, error) {
-	// Split by colon to get type, id, and label
-	parts := strings.Split(settingStr, ":")
+	parts := strings.SplitN(settingStr, ":", 3)
 	if len(parts) < 3 {
-		dbg("invalid setting format (expected type:id:label): %s", settingStr)
-		return shop2.Setting{}, fmt.Errorf("invalid setting format (expected type:id:label): %s\n", settingStr)
+		return shop2.Setting{}, fmt.Errorf("%w %q: expected type:id:label", ErrInvalidSetting, strings.TrimSpace(settingStr))
 	}
 
 	settingType := strings.TrimSpace(parts[0])
 	settingID := strings.TrimSpace(parts[1])
 	settingLabel := strings.TrimSpace(parts[2])
 
-	// Create the appropriate input type based on the settingType
-	return shop2.NewSettingFromType(settingType, settingID, settingLabel)
+	setting, err := shop2.NewSettingFromType(settingType, settingID, settingLabel)
+	if err != nil {
+		return shop2.Setting{}, fmt.Errorf("%w: %w", ErrInvalidSetting, err)
+	}
+	return setting, nil
 }
 
 func (ss *SectionService) CreateLiquidAssignments() string {
@@ -239,58 +226,33 @@ func (ss *SectionService) CreateLiquidAssignments() string {
 	return strings.TrimSpace(output.String())
 }
 
-var (
-	missingNameErr       = errors.New("name is required")
-	missingSectionDirErr = errors.New("missing sections directory. Are you at the top level of your project?")
-	templatePathErr      = errors.New("sectionHandler: reading template")
-)
-
-var CreateSection = func(ctx context.Context, opts ...SectionServiceOption) func(ctx context.Context) error {
-
-	return func(ctx context.Context) error {
-
-		s := &SectionService{}
-
-		// errors := make(map[string]error)
-		for _, op := range opts {
-			op(s)
-		}
-
-		if s.Section.Schema.Name == "" {
-			return missingNameErr
-		}
-
-		// does sections dir exist?
-		if !utils.FolderExistsInPwd("sections") {
-			return missingSectionDirErr
-		}
-
-		// does file name already exist?
-		path := filepath.Join("sections", utils.Handlize(s.Section.Schema.Name)+".liquid")
-		if utils.FileExists(path) {
-			path = utils.EnsureUniqueFilename(path)
-		}
-
-		if err := os.WriteFile(path, []byte(s.Render()), 0o644); err != nil {
-			return fmt.Errorf("handleCreateBlock: write file: %w", err)
-		}
-
-		return nil
-	}
-}
-
-// Similar to CreateSection, but just returns a string. Use this if within a TUI.
-var CreateSectionPreview = func(ctx context.Context, opts ...SectionServiceOption) (string, error) {
-
-	s := &SectionService{}
-
-	// errors := make(map[string]error)
+// CreateSection renders a section and writes it to sections/<handle>.liquid.
+// It returns the path of the created file.
+func CreateSection(ctx context.Context, opts ...SectionServiceOption) (string, error) {
+	s := NewSectionService()
 	for _, op := range opts {
 		op(s)
 	}
 
 	if s.Section.Schema.Name == "" {
-		return "", missingNameErr
+		return "", ErrMissingName
+	}
+	if !utils.FolderExistsInPwd("sections") {
+		return "", ErrMissingSectionsDir
+	}
+
+	return writeLiquid("sections", s.Section.Schema.Name, s.Render())
+}
+
+// CreateSectionPreview renders a section without writing it. Use this within a TUI.
+func CreateSectionPreview(ctx context.Context, opts ...SectionServiceOption) (string, error) {
+	s := NewSectionService()
+	for _, op := range opts {
+		op(s)
+	}
+
+	if s.Section.Schema.Name == "" {
+		return "", ErrMissingName
 	}
 
 	return s.Render(), nil

@@ -2,14 +2,11 @@ package main
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/daved/clic"
+	"github.com/guitarkeegan/shop-cli/internal/colors"
 	ren "github.com/guitarkeegan/shop-cli/internal/render-service"
-)
-
-var (
-	missingBlocksDirErr = errors.New("missing blocks directory. Are you at the top level of your project?")
 )
 
 type CreateBlockOptions struct {
@@ -18,29 +15,25 @@ type CreateBlockOptions struct {
 }
 
 func NewCreateBlockOptions() *CreateBlockOptions {
-	return &CreateBlockOptions{
-		Name: "",
-	}
+	return &CreateBlockOptions{}
 }
 
 func handleBlock(ctx context.Context) error {
-	return missingFlagErr
+	return ErrMissingSubcommand
 }
 
 func handleCreateBlock(opt *CreateBlockOptions) clic.HandlerFunc {
 	return func(ctx context.Context) error {
-		var blockOpts []ren.RenderBlockServiceOption
-
-		blockOpts = append(blockOpts, ren.WithBlockName(opt.Name))
-
-		if opt.Inputs != "" {
-			ss, err := ren.ParseSettingStrings(opt.Inputs)
-			if err != nil {
-				return err
-			}
-			blockOpts = append(blockOpts, ren.WithBlockSettings(ss))
+		settings, err := ren.ParseSettingStrings(opt.Inputs)
+		if err != nil {
+			return err
 		}
 
-		return ren.CreateBlock(ctx, blockOpts...)(ctx)
+		path, err := ren.CreateBlock(ctx, ren.WithBlockName(opt.Name), ren.WithBlockSettings(settings))
+		if err != nil {
+			return err
+		}
+		fmt.Println(colors.Success("Created " + path))
+		return nil
 	}
 }
