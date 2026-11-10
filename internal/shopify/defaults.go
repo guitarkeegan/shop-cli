@@ -1,7 +1,5 @@
 package shopify
 
-import "strconv"
-
 // Defaults added to every section generated from the CLI.
 
 // NewHeader creates a header pseudo-setting for the theme editor sidebar.
@@ -16,7 +14,7 @@ func NewDefaultColorSchemeSetting() Setting {
 		ID:      "color_scheme",
 		Type:    "color_scheme",
 		Label:   "t:sections.all.colors.label",
-		Default: ptr("Primary"),
+		Default: "Primary",
 	}
 }
 
@@ -37,6 +35,6 @@ func newPaddingSetting(id, label string) Setting {
 		Max:     ptr(120),
 		Step:    ptr(4),
 		Unit:    ptr("px"),
-		Default: ptr(strconv.Itoa(36)),
+		Default: 36,
 	}
 }
