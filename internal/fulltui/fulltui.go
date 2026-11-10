@@ -21,10 +21,17 @@ var dbg = func() func(format string, as ...any) {
 	}
 }()
 
-func Run() error {
+// Run starts the interactive file builder. It returns the path of the
+// created file, or "" if the user quit without creating one.
+func Run() (string, error) {
 	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		return err
+	final, err := p.Run()
+	if err != nil {
+		return "", err
 	}
-	return nil
+	m, ok := final.(model)
+	if !ok {
+		return "", nil
+	}
+	return m.created.path, m.created.err
 }

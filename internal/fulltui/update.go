@@ -2,26 +2,30 @@ package fulltui
 
 import tea "github.com/charmbracelet/bubbletea"
 
+// hasPreview reports whether the state shows the live preview pane.
+func (s state) hasPreview() bool {
+	switch s {
+	case includingSettings, continueSettings, includingBlocks, continueBlockSettings,
+		additionalBlocksPrompt, includingBlockFileSettings, continueBlockFileSettings,
+		includingSnippetDoc, continueSnippetParams, previewingFile:
+		return true
+	}
+	return false
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-
-		switch msg.String() {
-		case "ctrl+c":
+		if msg.String() == "ctrl+c" {
 			m.state = quitting
 			return m, tea.Quit
 		}
-	}
-
-	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		// Update viewport dimensions when window resizes for all file creation states
-		switch m.state {
-		case includingSettings, continueSettings, includingBlocks, continueBlockSettings, additionalBlocksPrompt, includingSnippetDoc, continueSnippetParams, previewingFile:
+		if m.state.hasPreview() {
 			m.viewportModel.Width = (m.width / 2) - 4 // Account for borders/padding
 			m.viewportModel.Height = m.height - 6     // Account for borders/padding
 		}
@@ -31,18 +35,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.preview = msg.Preview
 		}
-		// Set the viewport content when preview is ready for all file creation states
-		switch m.state {
-		case includingSettings, continueSettings, includingBlocks, continueBlockSettings, additionalBlocksPrompt, includingSnippetDoc, continueSnippetParams, previewingFile:
+		if m.state.hasPreview() {
 			m.viewportModel.SetContent(m.preview)
 		}
-	case createSectionMsg, createSnippetMsg:
+	case fileCreatedMsg:
+		m.created = msg
+		m.state = quitting
 		return m, tea.Quit
 	}
 
-	// Update viewport for scrolling in file creation states
-	switch m.state {
-	case includingSettings, continueSettings, includingBlocks, continueBlockSettings, additionalBlocksPrompt, includingSnippetDoc, continueSnippetParams:
+	// Update viewport for scrolling in file creation states. The preview
+	// state updates its own viewport.
+	if m.state.hasPreview() && m.state != previewingFile {
 		var viewportCmd tea.Cmd
 		m.viewportModel, viewportCmd = m.viewportModel.Update(msg)
 		cmd = tea.Batch(cmd, viewportCmd)

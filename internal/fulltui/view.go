@@ -1,7 +1,5 @@
 package fulltui
 
-import "strings"
-
 func (m model) View() string {
 	switch m.state {
 	case selectingFile:
@@ -34,9 +32,15 @@ func (m model) View() string {
 			func() string { return m.viewportModel.View() },
 		)
 	case includingBlockFileSettings:
-		return withPageTitle("Block Settings", m.settingsModel.View())
+		return m.splitScreen(
+			func() string { return withPageTitle("Block -> Settings", m.settingsModel.View()) },
+			func() string { return m.viewportModel.View() },
+		)
 	case continueBlockFileSettings:
-		return withPageTitle("Block Settings", m.continueSettingsModel.View())
+		return m.splitScreen(
+			func() string { return withPageTitle("Block -> Settings", m.continueSettingsModel.View()) },
+			func() string { return m.viewportModel.View() },
+		)
 	case includingSnippetDoc:
 		return m.splitScreen(
 			func() string { return withPageTitle("Snippet Params", m.snippetDocModel.View()) },
@@ -52,21 +56,8 @@ func (m model) View() string {
 	case creatingFile:
 		return withPageTitle("Creating File...", "Let's do this!")
 	case quitting:
-		settingsBuilder := strings.Builder{}
-
-		for _, sSettings := range m.settings {
-			_, _ = settingsBuilder.WriteString(sSettings.String() + "\n")
-		}
-		for _, bSetting := range m.blockSettings {
-			_, _ = settingsBuilder.WriteString(bSetting.String() + "\n")
-		}
-		if len(m.snippetDoc.Param) > 1 {
-			_, _ = settingsBuilder.WriteString(m.snippetDoc.String() + "\n")
-		}
-
-		dbg(withPageTitle("bye for now!", settingsBuilder.String()))
-
-		return withPageTitle("bye for now!", settingsBuilder.String())
+		// Run prints the outcome after the alt screen is restored.
+		return ""
 
 	default:
 		return "no view found..."

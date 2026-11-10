@@ -2,6 +2,5 @@ package main
 
 import "errors"
 
-var (
-	ErrMissingFlagOrCommand = errors.New("missing commands, flags, or operand")
-)
+// ErrMissingSubcommand is returned by parent commands run without a subcommand.
+var ErrMissingSubcommand = errors.New("missing subcommand")

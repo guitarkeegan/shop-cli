@@ -23,7 +23,7 @@ func NewExampleOptions() *ExampleOptions {
 
 var (
 	ErrMissingEnvVars = errors.New("missing env vars for git usage")
-	ErrTimeout        = errors.New("took too long to complete")
+	ErrTimeout        = errors.New("timed out syncing examples")
 )
 
 const (
@@ -36,7 +36,7 @@ const (
 
 func examplesHandler() clic.HandlerFunc {
 	return func(ctx context.Context) error {
-		return ErrMissingFlagOrCommand
+		return ErrMissingSubcommand
 	}
 }
 
@@ -47,7 +47,7 @@ func hasRequiredEnvs() (string, string, string, string, error) {
 	githubPath := os.Getenv(shopExamplesPath) // GitHub folder path, e.g., "examples"
 
 	if gitToken == "" || repo == "" || owner == "" || githubPath == "" {
-		return "", "", "", "", fmt.Errorf("%w: need: %s, %s, %s, %s\n",
+		return "", "", "", "", fmt.Errorf("%w: set %s, %s, %s and %s",
 			ErrMissingEnvVars, githubToken, shopGithubOwner, shopGithubRepo, shopExamplesPath)
 	}
 	return gitToken, repo, owner, githubPath, nil
@@ -75,7 +75,7 @@ func handleExamples(opt *ExampleOptions) clic.HandlerFunc {
 
 		localDir, err := getExamplesDir()
 		if err != nil {
-			return fmt.Errorf("getExamplesDir: %s", err)
+			return fmt.Errorf("find cache directory: %w", err)
 		}
 
 		if err := os.MkdirAll(localDir, 0755); err != nil {
@@ -85,14 +85,14 @@ func handleExamples(opt *ExampleOptions) clic.HandlerFunc {
 		timedCtx, cancel := context.WithTimeoutCause(ctx, time.Second*30, ErrTimeout)
 		defer cancel()
 
-		cfg := git.MakeConfig(ctx, gitToken, owner, repo, githubPath, localDir)
+		cfg := git.MakeConfig(timedCtx, gitToken, owner, repo, githubPath, localDir)
 		client := git.New(cfg)
 
 		if err := client.DownloadFolder(timedCtx, opt.Force); err != nil {
 			return err
 		}
 
-		colors.Success(fmt.Sprintf("Examples synced to: %s", localDir))
+		fmt.Println(colors.Success("Examples synced to " + localDir))
 		return nil
 	}
 }

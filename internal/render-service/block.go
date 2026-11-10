@@ -3,18 +3,10 @@ package renderservice
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	shop2 "github.com/guitarkeegan/shop-cli/internal/shopify-v2"
 	"github.com/guitarkeegan/shop-cli/internal/utils"
-)
-
-var (
-	missingBlocksDirErr = errors.New("missing blocks directory. Are you at the top level of your project?")
 )
 
 type RenderBlockService struct {
@@ -85,44 +77,33 @@ func WithBlockBlocks(blocks []shop2.ThemeBlockReference) RenderBlockServiceOptio
 	}
 }
 
-var CreateBlock = func(ctx context.Context, opts ...RenderBlockServiceOption) func(ctx context.Context) error {
-	return func(ctx context.Context) error {
-
-		b := NewRenderBlockService()
-		for _, op := range opts {
-			op(b)
-		}
-
-		if b.Block.Schema.Name == "" {
-			return missingNameErr
-		}
-
-		if !utils.FolderExistsInPwd("blocks") {
-			return missingBlocksDirErr
-		}
-
-		path := filepath.Join("blocks", utils.Handlize(b.Block.Schema.Name)+".liquid")
-		if utils.FileExists(path) {
-			path = utils.EnsureUniqueFilename(path)
-		}
-
-		if err := os.WriteFile(path, []byte(b.Render()), 0o644); err != nil {
-			return fmt.Errorf("handleCreateBlock: write file: %w", err)
-		}
-
-		return nil
-	}
-}
-
-var CreateBlockPreview = func(ctx context.Context, opts ...RenderBlockServiceOption) (string, error) {
-
+// CreateBlock renders a theme block and writes it to blocks/<handle>.liquid.
+// It returns the path of the created file.
+func CreateBlock(ctx context.Context, opts ...RenderBlockServiceOption) (string, error) {
 	b := NewRenderBlockService()
 	for _, op := range opts {
 		op(b)
 	}
 
 	if b.Block.Schema.Name == "" {
-		return "", missingNameErr
+		return "", ErrMissingName
+	}
+	if !utils.FolderExistsInPwd("blocks") {
+		return "", ErrMissingBlocksDir
+	}
+
+	return writeLiquid("blocks", b.Block.Schema.Name, b.Render())
+}
+
+// CreateBlockPreview renders a theme block without writing it. Use this within a TUI.
+func CreateBlockPreview(ctx context.Context, opts ...RenderBlockServiceOption) (string, error) {
+	b := NewRenderBlockService()
+	for _, op := range opts {
+		op(b)
+	}
+
+	if b.Block.Schema.Name == "" {
+		return "", ErrMissingName
 	}
 
 	return b.Render(), nil

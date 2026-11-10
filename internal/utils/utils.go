@@ -2,32 +2,20 @@ package utils
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
 func FolderExistsInPwd(folderName string) bool {
 	info, err := os.Stat(folderName)
-	if os.IsNotExist(err) {
-		return false
-	}
-	if err != nil {
-		log.Fatalf("folderExistsInPwd: %s", err)
-	}
-	return info.IsDir()
+	return err == nil && info.IsDir()
 }
 
 func FileExists(filepath string) bool {
 	info, err := os.Stat(filepath)
-	if os.IsNotExist(err) {
-		return false
-	}
-	if err != nil {
-		log.Fatalf("fileExists: %s", err)
-	}
-	return info.Mode().IsRegular()
+	return err == nil && info.Mode().IsRegular()
 }
 
 func EnsureUniqueFilename(fullPath string) string {
@@ -51,7 +39,12 @@ func EnsureUniqueFilename(fullPath string) string {
 	}
 }
 
+var nonHandleChars = regexp.MustCompile(`[^a-z0-9_]+`)
+
+// Handlize converts a display name into a safe file handle: lowercase letters,
+// digits and underscores, with any other runs of characters collapsed to "-".
+// "My Hero / Banner!" becomes "my-hero-banner".
 func Handlize(name string) string {
-	cName := strings.ToLower(strings.ReplaceAll(name, " ", "-"))
-	return cName
+	handle := nonHandleChars.ReplaceAllString(strings.ToLower(name), "-")
+	return strings.Trim(handle, "-")
 }

@@ -51,7 +51,7 @@ func IsValidSettingType(t string) bool {
 // Returns the setting and true if the type is valid, or a zero Setting and false otherwise.
 func NewSettingFromType(typeName, id, label string) (Setting, error) {
 	if !IsValidSettingType(typeName) {
-		return Setting{}, fmt.Errorf("setting type in invalid. setting: %s\n", typeName)
+		return Setting{}, fmt.Errorf("unknown setting type %q", typeName)
 	}
 
 	s := Setting{

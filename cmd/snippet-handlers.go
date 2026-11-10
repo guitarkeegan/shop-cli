@@ -2,34 +2,33 @@ package main
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	"github.com/daved/clic"
-	render "github.com/guitarkeegan/shop-cli/internal/render-service"
-)
-
-var (
-	missingSnippetDirErr = errors.New("No 'snippets' dir found. Are you at the top level of the project?")
-	missingNameErr       = errors.New("Snippet must have a name")
+	"github.com/guitarkeegan/shop-cli/internal/colors"
+	ren "github.com/guitarkeegan/shop-cli/internal/render-service"
 )
 
 func snippetHandler() clic.HandlerFunc {
 	return func(ctx context.Context) error {
-		return missingFlagErr
+		return ErrMissingSubcommand
 	}
 }
 
 func handleCreateSnippet(opt *SnippetCreateOptions) clic.HandlerFunc {
 	return func(ctx context.Context) error {
-		dbg("opt: name: %s", opt.Name)
-		handler := render.CreateSnippet(
+		path, err := ren.CreateSnippet(
 			ctx,
-			render.WithSnippetDescription(opt.Description),
-			render.WithSnippetFileName(opt.Name),
-			render.WithSnippetParamsAsString(opt.DocParams),
-			render.WithSnippetTemplate(opt.Template),
-			render.WithSnippetAddExample(opt.Example),
+			ren.WithSnippetFileName(opt.Name),
+			ren.WithSnippetDescription(opt.Description),
+			ren.WithSnippetParamsAsString(opt.DocParams),
+			ren.WithSnippetTemplate(opt.Template),
+			ren.WithSnippetAddExample(opt.Example),
 		)
-		return handler(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Println(colors.Success("Created " + path))
+		return nil
 	}
 }
